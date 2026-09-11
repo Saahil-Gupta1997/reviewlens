@@ -1,0 +1,242 @@
+[
+  {
+    "review_id": "VAL-001",
+    "review_text": "Login is easy and reliable. I can access my workspace every morning.",
+    "rating": 5,
+    "review_date": "2026-07-01",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-002",
+    "review_text": "Login works perfectly, including after restarting my phone.",
+    "rating": 5,
+    "review_date": "2026-07-02",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-003",
+    "review_text": "The interface is clear and easy to use.",
+    "rating": 4,
+    "review_date": "2026-07-03",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-004",
+    "review_text": "Customer support was helpful and solved my question quickly.",
+    "rating": 4,
+    "review_date": "2026-07-04",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-005",
+    "review_text": "The app is fast and responsive when opening my dashboard.",
+    "rating": 5,
+    "review_date": "2026-07-05",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-006",
+    "review_text": "The price is affordable and offers good value.",
+    "rating": 4,
+    "review_date": "2026-07-06",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-007",
+    "review_text": "The dashboard is slow when I open a large report.",
+    "rating": 3,
+    "review_date": "2026-07-07",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-008",
+    "review_text": "Export works well. The downloaded report contains all my entries.",
+    "rating": 4,
+    "review_date": "2026-07-08",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-009",
+    "review_text": "The interface is intuitive and the buttons are easy to find.",
+    "rating": 5,
+    "review_date": "2026-07-09",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-010",
+    "review_text": "Performance is slow when switching between reports.",
+    "rating": 3,
+    "review_date": "2026-07-10",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-011",
+    "review_text": "Notifications are useful and arrive on time.",
+    "rating": 4,
+    "review_date": "2026-07-11",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-012",
+    "review_text": "Customer support was unhelpful and ignored my request for three days.",
+    "rating": 2,
+    "review_date": "2026-07-12",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-013",
+    "review_text": "Login is broken. I cannot access my workspace after the update.",
+    "rating": 1,
+    "review_date": "2026-08-01",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-014",
+    "review_text": "Login fails every morning and prevents me from opening the app.",
+    "rating": 1,
+    "review_date": "2026-08-02",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-015",
+    "review_text": "Login is unreliable. I need several attempts to enter my workspace.",
+    "rating": 2,
+    "review_date": "2026-08-03",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-016",
+    "review_text": "Login is broken, but the interface is easy to use once I get inside.",
+    "rating": 2,
+    "review_date": "2026-08-04",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-017",
+    "review_text": "Login fails after restarting my phone. Reinstalling did not help.",
+    "rating": 1,
+    "review_date": "2026-08-05",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-018",
+    "review_text": "Login is frustrating because it repeatedly rejects my valid password.",
+    "rating": 2,
+    "review_date": "2026-08-06",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-019",
+    "review_text": "The dashboard is slow and takes a long time to display reports.",
+    "rating": 3,
+    "review_date": "2026-08-07",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-020",
+    "review_text": "Customer support was unhelpful and never answered my question.",
+    "rating": 2,
+    "review_date": "2026-08-08",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-021",
+    "review_text": "The interface is clear and easy to navigate.",
+    "rating": 4,
+    "review_date": "2026-08-09",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-022",
+    "review_text": "The price is acceptable. I have no other comments.",
+    "rating": 3,
+    "review_date": "2026-08-10",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "App Store"
+  },
+  {
+    "review_id": "VAL-023",
+    "review_text": "Export works well, including a report titled \"Weekly, final\".\nThe downloaded file contains every entry.",
+    "rating": 4,
+    "review_date": "2026-08-11",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "VAL-024",
+    "review_text": "Login works perfectly for me. I signed in successfully on three separate days.",
+    "rating": 5,
+    "review_date": "2026-08-12",
+    "product": "TaskFlow",
+    "product_version": "2.0",
+    "region": "NA",
+    "source": "Google Play"
+  }
+]

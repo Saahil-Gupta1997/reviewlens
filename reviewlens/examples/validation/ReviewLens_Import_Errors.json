@@ -1,0 +1,62 @@
+[
+  {
+    "review_id": "EDGE-001",
+    "review_text": "Login is easy and reliable. I can access my workspace every morning.",
+    "rating": 5,
+    "review_date": "2026-07-01",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "EDGE-001",
+    "review_text": "Login is easy and reliable. I can access my workspace every morning.",
+    "rating": 5,
+    "review_date": "2026-07-01",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "App Store"
+  },
+  {
+    "review_id": "EDGE-002",
+    "review_text": "Login works perfectly, including after restarting my phone.",
+    "rating": null,
+    "review_date": "2026-07-02",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "EDGE-003",
+    "review_text": "The interface is clear and easy to use.",
+    "rating": 6,
+    "review_date": "2026-07-03",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  },
+  {
+    "review_id": "EDGE-004",
+    "review_text": "",
+    "rating": 4,
+    "review_date": "2026-07-04",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "NA",
+    "source": "App Store"
+  },
+  {
+    "review_id": "EDGE-005",
+    "review_text": "The app is fast and responsive when opening my dashboard.",
+    "rating": 5,
+    "review_date": "2026-02-30",
+    "product": "TaskFlow",
+    "product_version": "1.0",
+    "region": "EU",
+    "source": "Google Play"
+  }
+]

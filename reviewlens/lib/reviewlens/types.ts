@@ -1,0 +1,12 @@
+export type Sentiment = "negative" | "positive" | "neutral";
+export type Aspect = { key: string; label: string; sentiment: Sentiment; evidence: string };
+export type Review = { id: string; text: string; rating: number | null; date: string; product: string; version: string; region: string; source: string; aspects: Aspect[] };
+export type Dataset = { id: string; name: string; filename: string; createdAt: string; count: number; rejected: number; duplicates: number; method: string; reviews?: Review[] };
+export type Filters = { product?: string; version?: string; region?: string; source?: string; rating?: string; from?: string; to?: string; search?: string };
+export type ThemeStat = { key: string; label: string; count: number; negative: number; positive: number; neutral: number; share: number; reviewIds: string[] };
+export type Stats = { count: number; rated: number; average: number | null; negative: number; positive: number; unrated: number; coverage: number; themes: ThemeStat[]; distribution: number[] };
+export type Finding = { text: string; reviewIds: string[] };
+export type Answer = { id: string; question: string; intent: string; status: "supported" | "limited" | "clarify" | "unsupported"; summary: string; findings: Finding[]; citations: Review[]; count: number; filters: Filters; notes: string[]; createdAt: string; model: string; latencyMs?: number; feedback?: string; metric?: { label: string; numerator: number; denominator: number; value: number | null; unit: "percent" | "count" | "average" }; comparison?: { field: string; left: string; right: string; leftCount: number; rightCount: number; leftAverage: number | null; rightAverage: number | null; delta: number | null; themes: { label: string; left: number; right: number; delta: number }[] } };
+export type ImportIssue = { row: number; message: string };
+export type ParsedFile = { headers: string[]; rows: Record<string,string>[]; issues: ImportIssue[] };
+export type Mapping = Record<"text"|"rating"|"date"|"product"|"version"|"region"|"source"|"id", string>;
