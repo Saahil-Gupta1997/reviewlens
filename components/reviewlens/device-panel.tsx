@@ -11,11 +11,13 @@ export function useDeviceIndex(dataset: Dataset | null) {
   const generation = useRef(0);
   useEffect(() => {
     const version = ++generation.current;
-    client.current.cancel();setIndexed(0);setWorking(false);setMessage('');setError('');
-    if (dataset) client.current.run('status',dataset.id,dataset.reviews || []).then(r=>{
-      if(version===generation.current)setIndexed(r.indexed);
-    }).catch(e=>{if(version===generation.current&&e.name!=='AbortError')setError(e.message);});
-    return ()=>{generation.current++;client.current.cancel();};
+    let active=true;
+    const activeClient=client.current;
+    activeClient.cancel();setIndexed(0);setWorking(false);setMessage('');setError('');
+    if (dataset) activeClient.run('status',dataset.id,dataset.reviews || []).then(r=>{
+      if(active&&version===generation.current)setIndexed(r.indexed);
+    }).catch(e=>{if(active&&version===generation.current&&e.name!=='AbortError')setError(e.message);});
+    return ()=>{active=false;activeClient.cancel();};
   },[dataset]);
   async function build() {
     if(!dataset)return;

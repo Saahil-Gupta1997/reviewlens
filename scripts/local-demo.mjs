@@ -4,13 +4,13 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { Miniflare } from 'miniflare';
-const root=process.cwd(), state=path.join(root,'.reviewlens-local'), origin='http://127.0.0.1:8788';
+const root=process.cwd(), state=path.join(root,'.reviewlens-local'), origin='http://127.0.0.1:8788',allowedHosts=new Set(['127.0.0.1:8788','localhost:8788']);
 await mkdir(state,{recursive:true});
 const secretPath=path.join(state,'encryption-secret');
 try{await writeFile(secretPath,randomBytes(48).toString('base64url'),{flag:'wx',mode:0o600});}catch(e){if(e.code!=='EEXIST')throw e;}
 const types={'.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.json':'application/json','.woff2':'font/woff2','.png':'image/png'};
 async function asset(request){
- const relative=decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/,''), base=path.join(root,'dist/client');
+ let relative;try{relative=decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '');}catch{return new Response('Not found',{status:404});}const base=path.join(root,'dist/client');
  const file=path.resolve(base,relative);if(!file.startsWith(base+path.sep))return new Response('Not found',{status:404});
  try{return new Response(await readFile(file),{headers:{'Content-Type':types[path.extname(file)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}
 }
@@ -27,8 +27,9 @@ for(const entry of journal.entries){
 }
 const server=createServer(async(req,res)=>{
  try{
-  if(req.headers.host!=='127.0.0.1:8788'||(req.headers.origin&&req.headers.origin!==origin)){res.writeHead(403);res.end('Local demo accepts same-origin loopback requests only.');return;}
-  const url=new URL(req.url,origin);if(url.origin!==origin){res.writeHead(403);res.end();return;}
+  const host=req.headers.host||'';if(!allowedHosts.has(host)){res.writeHead(403);res.end('Local demo accepts same-origin loopback requests only.');return;}const requestOrigin=`http://${host}`;
+  if(req.headers.origin){let suppliedOrigin='';try{suppliedOrigin=new URL(req.headers.origin).origin;}catch{res.writeHead(403);res.end('Local demo accepts a valid same-origin loopback request only.');return;}if(suppliedOrigin!==requestOrigin){res.writeHead(403);res.end('Local demo accepts same-origin loopback requests only.');return;}}
+  const url=new URL(req.url,requestOrigin);if(url.origin!==requestOrigin){res.writeHead(403);res.end();return;}
   let result;
   if(!url.pathname.startsWith('/api/')&&url.pathname!=='/')result=await asset(new Request(url));
   if(!result||result.status===404){
