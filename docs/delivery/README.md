@@ -14,6 +14,7 @@ decision **not** to ship the headline feature.
 | 2b | [**Semantic result — the feature missed its gate**](evaluation-semantic-result.md) | A measured failure, reported with the sweep proving calibration cannot fix it | 5 min |
 | 2c | [Postmortem: the model could never have loaded](postmortem-device-model-load.md) | A critical defect hidden for three weeks behind a misleading error message | 4 min |
 | 2d | [Expanding the evaluation](evaluation-expansion-plan.md) | What more data would and would not fix, and the one control that needs a second person | 4 min |
+| 2e | [dtype experiment: quantisation was not the problem](evaluation-dtype-experiment.md) | fp32 tested and rejected; the pre-agreed cut rule applied rather than reopened | 3 min |
 | 3   | [AI risk assessment](ai-risk-assessment.md)                  | Model-specific failure modes mapped to controls in code, each with a test       | 6 min |
 | 4   | [Decision log](decision-log.md)                              | Dated decisions with trade-offs, reversibility, and what would change my mind   | 5 min |
 | 5   | [RAID log](raid-log.md)                                      | Live risks, assumptions, issues and dependencies with owners and review dates   | 4 min |

@@ -1,0 +1,9 @@
+{
+  "D1": [{"reviewId":"VAL-020","score":0.3462},{"reviewId":"VAL-012","score":0.3128}],
+  "D2": [{"reviewId":"VAL-019","score":0.5477},{"reviewId":"VAL-007","score":0.4209},{"reviewId":"VAL-005","score":0.3483},{"reviewId":"VAL-011","score":0.305}],
+  "D3": [],
+  "D4": [{"reviewId":"VAL-024","score":0.3175}],
+  "D5": [],
+  "D6": [],
+  "D7": [{"reviewId":"VAL-022","score":0.3077}]
+}

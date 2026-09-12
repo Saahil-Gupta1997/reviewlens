@@ -26,6 +26,7 @@ const types = {
 // Harness page at /, shipped worker files at /*.js, fixtures under /data/.
 const routes = {
   '/': 'scripts/device-harness/index.html',
+  '/experiment': 'scripts/device-harness/experiment.html',
   '/semantic-worker.js': 'public/semantic-worker.js',
   '/semantic-core.js': 'public/semantic-core.js',
   '/data/ReviewLens_Validation_Reviews.json':

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>dtype experiment: q8 vs fp32</title>
+    <style>
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        margin: 24px;
+        max-width: 900px;
+      }
+      pre {
+        background: #f4f4f5;
+        padding: 12px;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      #status {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>dtype experiment: q8 vs fp32</h1>
+    <p>
+      Issue #8. The on-device feature missed its gate at q8. This separates
+      <strong>quantisation damage</strong> from <strong>model capacity</strong> by running both
+      dtypes through the identical chunking, cosine and <code>rank()</code> from
+      <code>semantic-core.js</code>. The only variable is <code>dtype</code>.
+    </p>
+    <p>
+      q8 is re-run as a control, so its numbers are reproduced rather than assumed from the
+      earlier capture.
+    </p>
+    <p id="status">Starting…</p>
+    <pre id="log"></pre>
+
+    <script type="module">
+      const statusEl = document.getElementById('status');
+      const logEl = document.getElementById('log');
+      const log = (m) => {
+        logEl.textContent += m + '\n';
+        statusEl.textContent = m;
+      };
+
+      window.__experiment = null;
+      (async () => {
+        try {
+          const core = await import('/semantic-core.js');
+          const raw = await (await fetch('/data/ReviewLens_Validation_Reviews.json')).json();
+          const golden = await (await fetch('/data/golden-set.json')).json();
+          const reviews = raw.map((r) => ({ id: r.review_id, text: r.review_text }));
+          const dev = golden.cases.filter((c) => c.split === 'dev');
+          const allowedIds = reviews.map((r) => r.id);
+          log(`${reviews.length} reviews, ${dev.length} dev cases.`);
+
+          const { pipeline, env } = await import(
+            'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js'
+          );
+          env.allowLocalModels = false;
+          env.backends.onnx.wasm.numThreads = 1;
+          env.backends.onnx.wasm.proxy = false;
+
+          const results = {};
+          for (const dtype of ['q8', 'fp32']) {
+            log(`--- ${dtype}: loading model…`);
+            const t0 = Date.now();
+            const pipe = await pipeline('feature-extraction', core.MODEL, {
+              revision: core.REVISION,
+              dtype,
+              device: 'wasm',
+            });
+            const loadMs = Date.now() - t0;
+            log(`${dtype}: model ready in ${loadMs} ms. Indexing…`);
+
+            // Same chunking as the shipped worker; records shaped for rank().
+            const t1 = Date.now();
+            const records = [];
+            for (const r of reviews) {
+              const passages = core.chunks(r.text);
+              for (const p of passages) {
+                const o = await pipe(p.text, { pooling: 'mean', normalize: true });
+                p.vector = Array.from(o.data);
+              }
+              records.push({ id: r.id, passages });
+            }
+            const indexMs = Date.now() - t1;
+            log(`${dtype}: indexed ${records.length} reviews in ${indexMs} ms.`);
+
+            const hits = {};
+            const rawScores = {};
+            const latency = {};
+            for (const c of dev) {
+              const t2 = Date.now();
+              const o = await pipe(c.question, { pooling: 'mean', normalize: true });
+              const q = Array.from(o.data);
+              hits[c.id] = core
+                .rank(q, records, allowedIds, 5, 0.3)
+                .map((h) => ({ reviewId: h.reviewId, score: Number(h.score.toFixed(4)) }));
+              latency[c.id] = Date.now() - t2;
+              rawScores[c.id] = core
+                .rank(q, records, allowedIds, 24, -1)
+                .map((h) => ({ reviewId: h.reviewId, score: Number(h.score.toFixed(4)) }));
+              log(
+                `${dtype} ${c.id} -> ${hits[c.id].length ? hits[c.id].map((h) => h.reviewId.replace('VAL-', '') + '@' + h.score.toFixed(3)).join(' ') : '(none)'}`,
+              );
+            }
+            results[dtype] = { loadMs, indexMs, latency, hits, rawScores };
+          }
+
+          window.__experiment = {
+            captured_at: new Date().toISOString(),
+            user_agent: navigator.userAgent,
+            model: core.MODEL + '@' + core.REVISION,
+            results,
+          };
+          statusEl.textContent = 'COMPLETE';
+          document.title = 'EXPERIMENT COMPLETE';
+        } catch (e) {
+          statusEl.textContent = 'FAILED: ' + (e.message || e);
+          document.title = 'EXPERIMENT FAILED';
+          log('FAILED: ' + (e.message || e) + '\n' + (e.stack || ''));
+        }
+      })();
+    </script>
+  </body>
+</html>
