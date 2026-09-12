@@ -33,8 +33,15 @@ export class DeviceSearch {
         if (this.timer) clearTimeout(this.timer); this.reject = null;
         if (data.error) reject(Error(data.error)); else resolve(data.result);
       };
-      worker.onerror = () => {
-        this.reject = null; reject(Error('The on-device model could not load. Check your connection or choose Basic analysis.')); this.cancel();
+      // A worker `error` event is usually a script that failed to parse or load, not a
+      // network problem. Do not guess: report that it could not start and carry the real
+      // message. See docs/delivery/postmortem-device-model-load.md.
+      worker.onerror = (event: ErrorEvent) => {
+        const detail = event?.message || 'the on-device worker failed to start';
+        console.error('ReviewLens on-device worker error:', detail, event);
+        this.reject = null;
+        reject(Error('The on-device worker could not start. Basic analysis remains available. Technical detail: ' + detail));
+        this.cancel();
       };
       worker.postMessage({ id, action, dataset, reviews: reviews.map(({ id, text }) => ({ id, text })), question, allowedIds });
     });

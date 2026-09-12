@@ -39,3 +39,26 @@ export function rank(query, records, allowedIds, limit = 5, threshold = 0.3) {
   }
   return [...best.values()].sort((a, b) => b.score - a.score || a.reviewId.localeCompare(b.reviewId)).slice(0, limit);
 }
+
+// Failure diagnosis must never be guessed.
+//
+// This function exists because the previous handler mapped ANY unrecognised error to
+// "check your connection and allow downloads from Hugging Face and jsDelivr". A module
+// resolution SyntaxError matched none of its patterns, so a code defect was reported to
+// users - and believed by this project - as a network problem for three weeks, and every
+// document recorded the wrong cause. See docs/delivery/postmortem-device-model-load.md.
+//
+// The rule: explain only what is actually recognised. Anything else reports that it could
+// not load and carries the real message, so a defect surfaces instead of hiding behind a
+// plausible story.
+export const KNOWN_CONDITION = /storage|index|embedding|Close other/;
+export const NETWORK_CONDITION = /network|fetch|NetworkError|Load failed|net::|ERR_NETWORK|offline/i;
+export function describeFailure(message) {
+  const detail = String(message ?? '').trim() || 'no error message was provided';
+  if (KNOWN_CONDITION.test(detail)) return { cause: 'known', detail, message: detail };
+  if (NETWORK_CONDITION.test(detail))
+    return { cause: 'network', detail,
+      message: 'The model could not be downloaded. Check your connection and allow downloads from Hugging Face and jsDelivr. Your saved reviews are safe; Basic analysis remains available.' };
+  return { cause: 'unknown', detail,
+    message: 'The on-device model could not load. Basic analysis remains available and your saved reviews are safe. Technical detail: ' + detail };
+}

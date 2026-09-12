@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {chunks,cosine,rank,validVector,DIMENSIONS} from '../public/semantic-core.js';
+import {chunks,cosine,rank,validVector,DIMENSIONS,describeFailure} from '../public/semantic-core.js';
 import {deviceAnswer,needsDeviceEvidence} from '../work/device-answer.mjs';
 import {answerQuestion} from '../work/intelligence.mjs';
 import {providerErrorMessage} from '../work/provider-errors.mjs';
@@ -43,4 +43,47 @@ test('billing failures distinguish quota, spending and temporary limits',()=>{
  assert.match(providerErrorMessage(429,'project_spend_limit_exceeded'),/spending or usage/);
  assert.match(providerErrorMessage(429,'rate_limit_exceeded'),/temporarily/);
  assert.match(providerErrorMessage(401,''),/key was rejected/);
+});
+
+// A misdiagnosed error is worse than an unexplained one. The previous handler mapped ANY
+// unrecognised failure to "check your connection", which is how a module-resolution
+// SyntaxError was reported as a network problem for three weeks and why every project
+// document recorded the wrong cause. See docs/delivery/postmortem-device-model-load.md.
+test('unrecognised failures are not given an invented cause', () => {
+  // The exact error that fooled this project.
+  const real = 'Failed to resolve module specifier "onnxruntime-common". Relative references must start with either "/", "./", or "../".';
+  const r = describeFailure(real);
+  assert.equal(r.cause, 'unknown');
+  assert.doesNotMatch(r.message, /connection|Hugging Face|jsDelivr|offline/i,
+    'an unrecognised error must not be blamed on the network');
+  assert.match(r.message, /could not load/);
+  assert.match(r.message, /onnxruntime-common/, 'the real message must survive for diagnosis');
+  assert.equal(r.detail, real);
+});
+test('recognised conditions keep their own actionable message', () => {
+  for (const known of [
+    'Browser storage is unavailable. Allow site storage or use Basic analysis.',
+    'Close other ReviewLens tabs and retry.',
+    'Model returned an invalid embedding. Try rebuilding.',
+    'Build or resume the on-device index in Settings first.',
+  ]) {
+    const r = describeFailure(known);
+    assert.equal(r.cause, 'known');
+    assert.equal(r.message, known, 'a recognised condition is passed through unchanged');
+  }
+});
+test('genuine network failures still get connectivity guidance', () => {
+  for (const netErr of ['NetworkError when attempting to fetch resource.', 'Failed to fetch', 'net::ERR_INTERNET_DISCONNECTED']) {
+    const r = describeFailure(netErr);
+    assert.equal(r.cause, 'network');
+    assert.match(r.message, /connection/);
+  }
+});
+test('an empty or missing error message still reports something usable', () => {
+  for (const empty of ['', null, undefined, '   ']) {
+    const r = describeFailure(empty);
+    assert.equal(r.cause, 'unknown');
+    assert.match(r.message, /could not load/);
+    assert.match(r.detail, /no error message was provided/);
+  }
 });

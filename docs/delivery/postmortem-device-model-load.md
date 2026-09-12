@@ -36,7 +36,7 @@ went right.
 ## Why it went undetected for so long
 
 **The error message was wrong, and the wrongness was self-confirming.** The worker's catch
-block maps anything not matching `/storage|index|embedding|Close other/` to:
+block mapped anything not matching `/storage|index|embedding|Close other/` to:
 
 > Check your connection and allow downloads from Hugging Face and jsDelivr.
 
@@ -88,10 +88,18 @@ Two failures were stacked, and the first was hiding the second.
 | Action | Type | State |
 | --- | --- | --- |
 | Import the self-contained bundle; comment why | Fix | Done |
-| Never map an unrecognised error to a specific cause — say "could not load" and log the real message | Design | **Open** — the catch block still guesses |
+| Never map an unrecognised error to a specific cause — say "could not load" and log the real message | Design | **Done.** `describeFailure()` in `semantic-core.js`, with tests asserting the original SyntaxError is not blamed on the network |
 | A test that actually loads the runtime, even without scoring quality | Test | **Open** — needs a browser-capable CI job |
 | `scripts/device-harness/` so anyone can reproduce a real run in one command | Tooling | Done |
 | Correct every document that attributed the gap to the environment | Docs | Done |
+
+## The handler itself, since fixed
+
+The guessing was the deeper defect, and it is now closed. Diagnosis moved into
+`describeFailure()` in `semantic-core.js`, which explains only conditions it actually
+recognises and otherwise reports "could not load" while carrying the real message. Four tests
+cover it, including an assertion that the exact `SyntaxError` above is **not** blamed on the
+network. Tracked as ISS-08.
 
 ## The lesson worth keeping
 
