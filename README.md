@@ -16,7 +16,7 @@ about whether the feature works.**
 
 | If you are here to judge                   | Read                                                                                                                                   |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| How this was delivered, gated and measured | **[Delivery artifacts](docs/delivery/README.md)** — start with the [launch readiness review](docs/delivery/launch-readiness-review.md) |
+| How this was delivered, gated and measured | **[The delivery narrative](docs/delivery/narrative.md)** — the whole project on one page |
 | Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, lint, 52 tests, build, retrieval gate                                               |
 | What the product does                      | [Three-minute walkthrough](#three-minute-walkthrough)                                                                                  |
 
@@ -157,7 +157,9 @@ append-only.
 
 ## Documentation
 
-**Delivery** — [index](docs/delivery/README.md) ·
+**Delivery** — [index](docs/delivery/README.md) · [**narrative**](docs/delivery/narrative.md) ·
+[**semantic result**](docs/delivery/evaluation-semantic-result.md) ·
+[**load postmortem**](docs/delivery/postmortem-device-model-load.md) ·
 [launch readiness](docs/delivery/launch-readiness-review.md) ·
 [evaluation](docs/delivery/evaluation.md) ·
 [AI risk assessment](docs/delivery/ai-risk-assessment.md) ·

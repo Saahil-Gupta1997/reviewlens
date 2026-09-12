@@ -8,8 +8,11 @@ decision **not** to ship the headline feature.
 
 | #   | Document                                                     | What it demonstrates                                                            | Time  |
 | --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------- | ----- |
+| 0 | [The delivery narrative](narrative.md) | The whole project on one page: problem, constraint, baseline, decision, defect, gate, no-go, next | 3 min |
 | 1   | [Launch readiness review](launch-readiness-review.md)        | A go/no-go with one feature held back, and the evidence behind both calls       | 4 min |
 | 2   | [Evaluation and the release gate](evaluation.md)             | Turning an eval plan into an executable gate with measured numbers              | 5 min |
+| 2b | [**Semantic result — the feature missed its gate**](evaluation-semantic-result.md) | A measured failure, reported with the sweep proving calibration cannot fix it | 5 min |
+| 2c | [Postmortem: the model could never have loaded](postmortem-device-model-load.md) | A critical defect hidden for three weeks behind a misleading error message | 4 min |
 | 3   | [AI risk assessment](ai-risk-assessment.md)                  | Model-specific failure modes mapped to controls in code, each with a test       | 6 min |
 | 4   | [Decision log](decision-log.md)                              | Dated decisions with trade-offs, reversibility, and what would change my mind   | 5 min |
 | 5   | [RAID log](raid-log.md)                                      | Live risks, assumptions, issues and dependencies with owners and review dates   | 4 min |
