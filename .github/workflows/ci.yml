@@ -1,7 +1,13 @@
 name: Verify ReviewLens
+
+# Every automatable gate in docs/delivery/release-gates.md runs here. The retrieval
+# quality gate is the one that makes this a release process rather than a test suite:
+# it fails the build on a quality regression, not only on broken code.
+
 on: [push, pull_request]
 permissions:
   contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -13,6 +19,23 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm run lint
-      - run: npm test
+
+      - name: Gate 1 - types
+        run: npx tsc --noEmit
+
+      - name: Gate 2 - lint
+        run: npm run lint
+
+      - name: Gates 3 and 4 - behaviour and build
+        run: npm test
+
+      - name: Gate 5 - retrieval quality regression
+        run: npm run eval
+
+      - name: Publish evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: eval/reports/
+          if-no-files-found: ignore
