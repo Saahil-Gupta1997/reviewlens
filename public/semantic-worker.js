@@ -10,7 +10,7 @@ function database() {
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => { databasePromise = null; reject(Error('Browser storage is unavailable. Allow site storage or use Basic analysis.')); };
-    req.onblocked = () => reject(Error('Close other ReviewLens tabs and retry.'));
+    req.onblocked = () => { databasePromise = null; reject(Error('Close other ReviewLens tabs and retry.')); };
   });
 }
 async function recordsFor(dataset) {

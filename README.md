@@ -58,7 +58,7 @@ npx tsc --noEmit
 npm test
 ```
 
-Tests cover import validation, ownership, calculations, scope, citations, simulated provider integration, local vector ranking and provider-error messages. The in-app Quality tab separately contains 24 synthetic acceptance questions. A GitHub Actions workflow is supplied; remote execution is pending repository publishing.
+Tests cover import validation, ownership, calculations, scope, citations, simulated provider integration, local vector ranking and provider-error messages. The current suite contains 51 automated checks; the in-app Quality tab separately contains 24 synthetic acceptance questions. A GitHub Actions workflow runs type checking, lint and the complete test/build path.
 
 The owner reported accurate behavior for the supplied clean and error fixtures in the original browser release. This is a user report, not independent model-quality evidence. [Expected answers](examples/validation/ReviewLens_Validation_Guide.md) remain outside the app's evidence.
 
@@ -78,6 +78,7 @@ The owner reported accurate behavior for the supplied clean and error fixtures i
 ## Product and delivery documentation
 
 - [QA defect and regression case study](docs/qa-rating-fix.md)
+- [Adversarial QA remediation and verification](docs/qa-remediation.md)
 - [Publish this repository on GitHub](docs/github-publishing.md)
 - [Product case study](docs/product-case-study.md)
 - [Architecture decisions](docs/architecture-decisions.md)

@@ -1,95 +1,2316 @@
-'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ArrowDownToLine, ArrowRight, ArrowUpRight, BarChart3, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleHelp, Database, FileUp, Filter, GitCompareArrows, Layers, Loader2, MessageSquare, Plus, Search, Settings2, ShieldCheck, Sparkles, Star, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react';
-import { Tabs,TabsList,TabsTrigger,TabsContent } from '@/components/ui/tabs';
-import { Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription } from '@/components/ui/dialog';
-import { Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription } from '@/components/ui/sheet';
-import { Select,SelectTrigger,SelectValue,SelectContent,SelectItem } from '@/components/ui/select';
-import { AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction } from '@/components/ui/alert-dialog';
-import { Table,TableHeader,TableRow,TableHead,TableBody,TableCell } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
-import { DevicePanel, useDeviceIndex } from './device-panel';
-import { needsDeviceEvidence } from '@/lib/reviewlens/device-answer';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Toaster } from '@/components/ui/sonner';
-import { toast } from 'sonner';
-import { stats,filterReviews,compare,TAXONOMY,answerQuestion } from '@/lib/reviewlens/intelligence';
-import { parseFile,guessMapping,normalizeImport,LIMITS } from '@/lib/reviewlens/ingest';
-import { demoCsv } from '@/lib/reviewlens/demo';
-import type { Answer,Dataset,Filters,Mapping,ParsedFile,Review,Stats } from '@/lib/reviewlens/types';
+"use client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  Activity,
+  ArrowDownToLine,
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  BookOpen,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Database,
+  FileUp,
+  Filter,
+  GitCompareArrows,
+  Layers,
+  Loader2,
+  MessageSquare,
+  Plus,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+  X,
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { DevicePanel, useDeviceIndex } from "./device-panel";
+import { needsDeviceEvidence } from "@/lib/reviewlens/device-answer";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import {
+  stats,
+  filterReviews,
+  compare,
+  TAXONOMY,
+  answerQuestion,
+} from "@/lib/reviewlens/intelligence";
+import {
+  parseFile,
+  guessMapping,
+  normalizeImport,
+  LIMITS,
+} from "@/lib/reviewlens/ingest";
+import { demoCsv } from "@/lib/reviewlens/demo";
+import type {
+  Answer,
+  Dataset,
+  Filters,
+  Mapping,
+  ParsedFile,
+  Review,
+} from "@/lib/reviewlens/types";
 
-type EvalResult={id:string;createdAt:string;version:string;provider:string;total:number;passed:number;limitations:string;cases:{name:string;category:string;passed:boolean;details:string}[]};
-async function api(action?:Record<string,unknown>,query='',signal?:AbortSignal){const r=await fetch('/api/workspace'+query,{method:action?'POST':'GET',headers:action?{'Content-Type':'application/json'}:undefined,body:action?JSON.stringify(action):undefined,signal});let value;try{value=await r.json();}catch{throw Error('The workspace could not be reached. Please retry.');}if(!r.ok)throw Error(value.error||'Request failed.');return value;}
-function download(name:string,text:string,type='text/markdown'){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function Picker({label,value,options,onChange,empty='All',disabled=false,labels}:{label:string;value:string;options:string[];onChange:(v:string)=>void;empty?:string;disabled?:boolean;labels?:Record<string,string>}){return <div className="picker"><label>{label}</label><Select value={value||'__all'} onValueChange={v=>onChange(v==='__all'?'':v)} disabled={disabled}><SelectTrigger aria-label={label}><SelectValue placeholder={empty}/></SelectTrigger><SelectContent><SelectItem value="__all">{empty}</SelectItem>{options.map(x=><SelectItem key={x} value={x}>{labels?.[x]||x}</SelectItem>)}</SelectContent></Select></div>;}
-function Tag({children,tone='plain'}:{children:React.ReactNode;tone?:string}){return <span className={`tag ${tone}`}>{children}</span>;}
-function Stars({rating}:{rating:number|null}){return <span className="stars">{rating===null?<span className="muted">Unrated</span>:<><Star size={13} fill="currentColor"/>{rating.toFixed(1)}</>}</span>;}
-function Scope({filters,count}:{filters:Filters;count:number}){return <div className="scope"><Filter size={14}/><span>{count.toLocaleString()} reviews</span>{Object.entries(filters).filter(([,v])=>v).map(([k,v])=><span key={k}>{k}: {v}</span>)}</div>;}
-function ExportBrief({dataset,rows}:{dataset:Dataset;rows:Review[]}){return <button className="btn secondary" onClick={()=>{const s=stats(rows);const content=`# ${dataset.name} — Review insight brief\n\nGenerated ${new Date().toISOString()}\n\nScope: ${s.count} reviews. Average rating: ${s.average??'unavailable'} across ${s.rated} rated reviews.\n\n## Leading negative themes\n\n`+s.themes.filter(t=>t.negative).map(t=>`- ${t.label}: ${t.negative}/${s.count} reviews (${t.share.toFixed(1)}%).\n  Evidence: ${rows.filter(r=>r.aspects.some(a=>a.key===t.key&&a.sentiment==='negative')).slice(0,2).map(r=>`${r.id}: ${JSON.stringify(r.text)}`).join('\n  ')}`).join('\n')+`\n\n## Suggested investigation\n\n`+s.themes.filter(t=>t.negative).slice(0,3).map(t=>`- Investigate ${t.label.toLowerCase()}; validate the cited cases, assign an owner, and compare the theme's negative mention rate after any change.`).join('\n')+`\n\n## Method and limitations\n\nEnglish-language rules classify feature mentions and sentiment. ${Math.round(s.coverage*100)}% of reviews match a recognised theme. Reviews may mention multiple themes; counts are not unique people. Review patterns do not establish causation.\n`;download('reviewlens-insight-brief.md',content);}}><ArrowDownToLine size={16}/>Export brief</button>;}
+type EvalResult = {
+  id: string;
+  createdAt: string;
+  version: string;
+  provider: string;
+  total: number;
+  passed: number;
+  limitations: string;
+  cases: { name: string; category: string; passed: boolean; details: string }[];
+};
+async function api(
+  action?: Record<string, unknown>,
+  query = "",
+  signal?: AbortSignal,
+) {
+  const r = await fetch("/api/workspace" + query, {
+    method: action ? "POST" : "GET",
+    headers: action ? { "Content-Type": "application/json" } : undefined,
+    body: action ? JSON.stringify(action) : undefined,
+    signal,
+  });
+  let value;
+  try {
+    value = await r.json();
+  } catch {
+    throw Error("The workspace could not be reached. Please retry.");
+  }
+  if (!r.ok) throw Error(value.error || "Request failed.");
+  return value;
+}
+function download(name: string, text: string, type = "text/markdown") {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function Picker({
+  label,
+  value,
+  options,
+  onChange,
+  empty = "All",
+  disabled = false,
+  labels,
+  allowEmpty = true,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  empty?: string;
+  disabled?: boolean;
+  labels?: Record<string, string>;
+  allowEmpty?: boolean;
+}) {
+  return (
+    <div className="picker">
+      <label>{label}</label>
+      <Select
+        value={value || "__all"}
+        onValueChange={(v) => onChange(v === "__all" ? "" : v)}
+        disabled={disabled}
+      >
+        <SelectTrigger aria-label={label}>
+          <SelectValue placeholder={empty} />
+        </SelectTrigger>
+        <SelectContent>
+          {allowEmpty && <SelectItem value="__all">{empty}</SelectItem>}
+          {options.map((x) => (
+            <SelectItem key={x} value={x}>
+              {labels?.[x] || x}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+function Tag({
+  children,
+  tone = "plain",
+}: {
+  children: React.ReactNode;
+  tone?: string;
+}) {
+  return <span className={`tag ${tone}`}>{children}</span>;
+}
+function Stars({ rating }: { rating: number | null }) {
+  return (
+    <span className="stars">
+      {rating === null ? (
+        <span className="muted">Unrated</span>
+      ) : (
+        <>
+          <Star size={13} fill="currentColor" />
+          {rating.toFixed(1)}
+        </>
+      )}
+    </span>
+  );
+}
+function Scope({ filters, count }: { filters: Filters; count: number }) {
+  return (
+    <div className="scope">
+      <Filter size={14} />
+      <span>{count.toLocaleString()} reviews</span>
+      {Object.entries(filters)
+        .filter(([, v]) => v)
+        .map(([k, v]) => (
+          <span key={k}>
+            {k}: {v}
+          </span>
+        ))}
+    </div>
+  );
+}
+function ExportBrief({ dataset, rows }: { dataset: Dataset; rows: Review[] }) {
+  return (
+    <button
+      className="btn secondary"
+      onClick={() => {
+        const s = stats(rows);
+        const content =
+          `# ${dataset.name} — Review insight brief\n\nGenerated ${new Date().toISOString()}\n\nScope: ${s.count} reviews. Average rating: ${s.average ?? "unavailable"} across ${s.rated} rated reviews.\n\n## Leading negative themes\n\n` +
+          s.themes
+            .filter((t) => t.negative)
+            .map(
+              (t) =>
+                `- ${t.label}: ${t.negative}/${s.count} reviews (${t.share.toFixed(1)}%).\n  Evidence: ${rows
+                  .filter((r) =>
+                    r.aspects.some(
+                      (a) => a.key === t.key && a.sentiment === "negative",
+                    ),
+                  )
+                  .slice(0, 2)
+                  .map((r) => `${r.id}: ${JSON.stringify(r.text)}`)
+                  .join("\n  ")}`,
+            )
+            .join("\n") +
+          `\n\n## Suggested investigation\n\n` +
+          s.themes
+            .filter((t) => t.negative)
+            .slice(0, 3)
+            .map(
+              (t) =>
+                `- Investigate ${t.label.toLowerCase()}; validate the cited cases, assign an owner, and compare the theme's negative mention rate after any change.`,
+            )
+            .join("\n") +
+          `\n\n## Method and limitations\n\nEnglish-language rules classify feature mentions and sentiment. ${Math.round(s.coverage * 100)}% of reviews match a recognised theme. Reviews may mention multiple themes; counts are not unique people. Review patterns do not establish causation.\n`;
+        download("reviewlens-insight-brief.md", content);
+      }}
+    >
+      <ArrowDownToLine size={16} />
+      Export brief
+    </button>
+  );
+}
 
-export default function Workspace(){
- const [datasets,setDatasets]=useState<Dataset[]>([]),[selected,setSelected]=useState(''),[dataset,setDataset]=useState<Dataset|null>(null),[tab,setTab]=useState('overview'),[filters,setFilters]=useState<Filters>({}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
- const [upload,setUpload]=useState(false),[busy,setBusy]=useState(''),[deleteOpen,setDeleteOpen]=useState(false),[source,setSource]=useState<Review|null>(null),[history,setHistory]=useState<Answer[]>([]),[answer,setAnswer]=useState<Answer|null>(null),[question,setQuestion]=useState(''),[searchMode,setSearchMode]=useState('device'),[indexed,setIndexed]=useState(0),[configuration,setConfiguration]=useState({configured:false,model:'gpt-4.1-mini',embeddingModel:'text-embedding-3-small'}),[usage,setUsage]=useState<any>(null),[evaluation,setEvaluation]=useState<EvalResult|null>(null);
- const [page,setPage]=useState(0),[themeFilter,setThemeFilter]=useState(''),[compareField,setCompareField]=useState<'version'|'region'|'product'|'source'>('version'),[left,setLeft]=useState(''),[right,setRight]=useState('');
- const device=useDeviceIndex(dataset);
- const requestVersion=useRef(0);const answerController=useRef<AbortController|null>(null);const indexCancel=useRef(false);
- const all=dataset?.reviews||[],rows=useMemo(()=>filterReviews(all,filters),[all,filters]),summary=useMemo(()=>stats(rows),[rows]);
- const options=(field:'product'|'version'|'region'|'source')=>[...new Set(all.map(r=>r[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
- useEffect(()=>{let live=true;setLoading(true);api().then(data=>{if(!live)return;setDatasets(data.datasets);setConfiguration(data.settings);setUsage(data.usage);setEvaluation(data.evaluation);setSelected(current=>data.datasets.some((d:Dataset)=>d.id===current)?current:data.datasets[0]?.id||'');setError('');}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[refresh]);
- useEffect(()=>{const controller=new AbortController();requestVersion.current++;answerController.current?.abort();indexCancel.current=true;setAnswer(null);setBusy('');setFilters({});setThemeFilter('');setPage(0);setSource(null);setHistory([]);setDataset(null);setIndexed(0);setLeft('');setRight('');if(!selected)return;
-  api(undefined,'?dataset='+encodeURIComponent(selected),controller.signal).then(data=>{setDataset(data.dataset);setHistory(data.history);setIndexed(data.indexed);setError('');const vs=[...new Set<string>(data.dataset.reviews.map((r:Review)=>r.version).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));setLeft(vs[0]||'');setRight(vs[vs.length-1]||'');}).catch(e=>{if(e.name!=='AbortError')setError(e.message);});return()=>controller.abort();
- },[selected,refresh]);
- useEffect(()=>{setPage(0);requestVersion.current++;answerController.current?.abort();setAnswer(null);setBusy(current=>current==='ask'?'':current);},[filters,searchMode]);
- const setFilter=(key:keyof Filters,value:string)=>setFilters(f=>({...f,[key]:value||undefined}));
- async function loadDemo(){setBusy('demo');try{const r=await api({action:'demo',uploadId:crypto.randomUUID()});setSelected(r.id);setRefresh(x=>x+1);toast.success('20 sample reviews are ready.');}catch(e){toast.error((e as Error).message);}finally{setBusy('');}}
- async function ask(q=question){if(!selected||!q.trim())return;setQuestion(q);setTab('ask');const version=++requestVersion.current,controller=new AbortController();answerController.current?.abort();answerController.current=controller;setBusy('ask');setAnswer(null);try{let deviceHits;const base=answerQuestion(all,q,filters);if(searchMode==='device'&&needsDeviceEvidence(base)){deviceHits=await device.search(q,filterReviews(all,base.filters),controller.signal);}if(controller.signal.aborted)return;const a=await api({action:'ask',datasetId:selected,question:q,filters,useAI:searchMode==='openai',searchMode,deviceHits},'',controller.signal);if(version!==requestVersion.current)return;setAnswer(a);setHistory(h=>[a,...h].slice(0,50));}catch(e){if((e as Error).name!=='AbortError'&&version===requestVersion.current)toast.error((e as Error).message);}finally{if(version===requestVersion.current)setBusy('');}}
- async function buildIndex(){if(!dataset)return;indexCancel.current=false;const id=selected;setBusy('index');try{let n=indexed;while(n<dataset.count&&!indexCancel.current){const r=await api({action:'index',datasetId:id});if(indexCancel.current)break;n=r.indexed;setIndexed(n);if(!r.batch)break;}if(!indexCancel.current)toast.success('Semantic search is ready.');}catch(e){toast.error((e as Error).message);}finally{setBusy('');}}
- async function remove(){setBusy('delete');try{await api({action:'delete',datasetId:selected});try{await device.clear(selected);}catch{toast.error('Dataset deleted. Clear this browser’s site data to remove any remaining device cache.');}setSelected('');setDataset(null);setRefresh(x=>x+1);setDeleteOpen(false);toast.success('Dataset and its answers deleted.');}catch(e){toast.error((e as Error).message);}finally{setBusy('');}}
- async function feedback(value:string){if(!answer)return;try{await api({action:'feedback',datasetId:selected,answerId:answer.id,feedback:value});setAnswer({...answer,feedback:value});setHistory(h=>h.map(x=>x.id===answer.id?{...x,feedback:value}:x));toast.success('Feedback saved.');}catch(e){toast.error((e as Error).message);}}
- async function evaluate(){setBusy('evaluate');try{const e=await api({action:'evaluate'});setEvaluation(e);toast.success('Acceptance checks completed.');}catch(e){toast.error((e as Error).message);}finally{setBusy('');}}
- const reviewed=themeFilter?rows.filter(r=>r.aspects.some(a=>a.key===themeFilter)):rows;
- const compared=left&&right&&left!==right?compare(rows,compareField,left,right):null;
- const negativeThemes=summary.themes.filter(t=>t.negative);
- return <div className="app-shell"><Toaster position="bottom-right" theme="light"/>
-  <header className="masthead"><a className="brand" href="/" aria-label="ReviewLens home"><span className="brandmark"><Search size={21}/></span>Review<span>Lens</span><span className="workspace-label">WORKSPACE</span></a><div className="mast-actions"><span className="private-label"><ShieldCheck size={15}/>Private workspace</span><button className="icon-btn" aria-label="Open settings" onClick={()=>setTab('settings')}><Settings2 size={19}/></button></div></header>
-  <main className="workspace">
-   <div className="workspace-heading"><div><p className="eyebrow">CUSTOMER FEEDBACK / INTELLIGENCE</p><h1>From reviews to reasons.</h1><p className="muted">Find the patterns. Check the evidence. Decide what to improve.</p></div><button className="btn primary" onClick={()=>setUpload(true)}><Plus size={17}/>Import reviews</button></div>
-   {error&&<div className="notice error" role="alert"><span>{error}</span><button className="btn secondary" onClick={()=>setRefresh(x=>x+1)}>Retry</button></div>}
-   {loading?<div className="loading-grid" aria-label="Loading workspace"><Skeleton className="h-28"/><Skeleton className="h-28"/><Skeleton className="h-28"/></div>:!datasets.length&&!error?<div className="onboarding"><div className="onboarding-copy"><Tag tone="blue">YOUR FIRST DATASET</Tag><h2>What are your customers<br/>really telling you?</h2><p>Bring your product reviews together, uncover recurring complaints, and get answers you can trace to the source.</p><div className="button-row"><button className="btn primary" onClick={loadDemo} disabled={!!busy}>{busy==='demo'?<Loader2 className="spin" size={17}/>:<Sparkles size={17}/>}Try the demo</button><button className="btn secondary" onClick={()=>setUpload(true)}><FileUp size={17}/>Upload CSV or JSON</button></div><p className="small muted">20 sample reviews · No API key needed · Saved privately</p></div><div className="sample-card"><span className="eyebrow">AN EXAMPLE OF WHAT YOU’LL FIND</span><div className="sample-quote">“Checkout still works, but login fails every morning.”</div><div className="sample-aspect"><span>Checkout & billing</span><Tag tone="green">Positive</Tag></div><div className="sample-aspect"><span>Login & authentication</span><Tag tone="red">Negative</Tag></div><div className="sample-footer"><CheckCircle2 size={16}/>Separate opinions about each feature</div></div></div>:null}
-   {!!datasets.length&&<div className="dataset-bar"><div className="dataset-choice"><Database size={18}/><Picker label="Active dataset" value={selected} options={datasets.map(d=>d.id)} labels={Object.fromEntries(datasets.map(d=>[d.id,d.name]))} onChange={setSelected} empty="Choose a dataset"/></div><span className="dataset-name">{datasets.find(d=>d.id===selected)?.name}</span>{dataset&&<><span className="muted small">{dataset.count.toLocaleString()} reviews · {new Date(dataset.createdAt).toLocaleDateString()}</span><button className="icon-btn danger" aria-label="Delete active dataset" onClick={()=>setDeleteOpen(true)}><Trash2 size={16}/></button></>}</div>}
-   <Tabs value={tab} onValueChange={setTab} className="product-tabs"><TabsList variant="line" className="nav-tabs">{[['overview','Overview',BarChart3],['ask','Ask ReviewLens',MessageSquare],['explore','Explore reviews',BookOpen],['compare','Compare',GitCompareArrows],['quality','Quality',Activity],['settings','Settings',Settings2]].map(([id,label,Icon])=><TabsTrigger key={String(id)} value={String(id)} disabled={!dataset&&!['settings','quality'].includes(String(id))}><Icon size={16}/>{String(label)}</TabsTrigger>)}</TabsList>
-    {dataset&&<div className="filter-bar"><Filter size={16}/>{(['product','version','region','source'] as const).map(f=><Picker key={f} label={f[0].toUpperCase()+f.slice(1)} value={filters[f]||''} options={options(f)} onChange={v=>setFilter(f,v)}/>)}<Picker label="Rating" value={filters.rating||''} options={['1','2','3','4','5','negative','positive','unrated']} onChange={v=>setFilter('rating',v)}/><details className="date-filter"><summary>Date range</summary><div><label>From<input type="date" value={filters.from||''} onChange={e=>setFilter('from',e.target.value)}/></label><label>To<input type="date" value={filters.to||''} min={filters.from} onChange={e=>setFilter('to',e.target.value)}/></label></div></details>{Object.values(filters).some(Boolean)&&<button className="text-btn" onClick={()=>setFilters({})}>Clear</button>}</div>}
-    <TabsContent value="overview">{dataset&&<><div className="stat-grid"><Metric label="Reviews in scope" value={summary.count.toLocaleString()} note={`of ${dataset.count.toLocaleString()} total reviews`}/><Metric label="Average rating" value={summary.average===null?'—':summary.average.toFixed(2)} note={`${summary.rated} rated · ${summary.unrated} unrated`} icon={<Star size={18}/>}/><Metric label="Low-rated reviews" value={summary.negative.toLocaleString()} note="1–2 stars · rating-based"/><Metric label="Theme coverage" value={`${Math.round(summary.coverage*100)}%`} note="Reviews matching a recognised theme"/></div>
-     <div className="two-col"><section className="panel"><div className="panel-title"><div><p className="eyebrow">WHERE TO LOOK FIRST</p><h2>Leading complaints</h2></div><Tag>{summary.count} reviews</Tag></div>{negativeThemes.length?negativeThemes.slice(0,6).map((t,i)=><button className="theme-row" key={t.key} onClick={()=>{setThemeFilter(t.key);setTab('explore');}}><span className="rank">{String(i+1).padStart(2,'0')}</span><div className="theme-main"><div><strong>{t.label}</strong><span>{t.negative} <small>reviews</small></span></div><div className="bar-track"><div style={{width:`${t.share}%`}}/></div></div><span className="theme-share">{t.share.toFixed(0)}%</span><ArrowUpRight size={16}/></button>):<Empty title="No negative themes in this scope" text="Try broader filters or inspect reviews that were not classified."/>}<p className="footnote">Negative feature mentions across all scoped reviews. Reviews can discuss multiple themes.</p></section>
-     <section className="panel rating-panel"><div className="panel-title"><div><p className="eyebrow">THE BIG PICTURE</p><h2>Rating distribution</h2></div><Star size={19}/></div><div className="rating-number">{summary.average?.toFixed(2)??'—'}<span>/ 5</span></div>{[5,4,3,2,1].map(n=><div className="rating-row" key={n}><span>{n}<Star size={12}/></span><div className="bar-track"><div style={{width:`${summary.count?summary.distribution[n-1]/summary.count*100:0}%`}}/></div><strong>{summary.distribution[n-1]}</strong></div>)}<p className="footnote">{summary.unrated} unrated reviews excluded. Fractional ratings are rounded in this chart only.</p></section></div>
-     <div className="insight-strip"><Sparkles size={24}/><div><h3>Go beyond the average.</h3><p>Ask what’s behind the ratings, then open the original reviews.</p></div><button className="btn primary" onClick={()=>ask('What are the most common complaints?')}>Ask about complaints<ArrowRight size={16}/></button></div>
-     <section className="panel"><div className="panel-title"><div><p className="eyebrow">FROM FINDING TO FOLLOW-UP</p><h2>Investigation priorities</h2></div><ExportBrief dataset={dataset} rows={rows}/></div><div className="priority-grid">{negativeThemes.slice(0,3).map(t=><div className="priority" key={t.key}><Tag tone="blue">{t.negative} negative mentions</Tag><h3>{t.label}</h3><p>Validate the reported cases, assign an owner, and track the negative mention rate after a change.</p><button className="text-btn" onClick={()=>ask(`What are customers saying about ${TAXONOMY.find(x=>x.key===t.key)?.terms[0]}?`)}>Inspect evidence <ArrowRight size={14}/></button></div>)}</div><p className="footnote">Suggested investigations, not validated root causes or automatically created tasks.</p></section>
-    </>}</TabsContent>
-    <TabsContent value="ask">{dataset&&<div className="ask-layout"><div><section className="panel ask-composer"><div className="panel-title"><div><p className="eyebrow">ASK YOUR REVIEWS</p><h2>What would you like to understand?</h2></div><Sparkles size={23}/></div><Scope count={rows.length} filters={filters}/><form onSubmit={e=>{e.preventDefault();ask();}}><label className="sr-only" htmlFor="question">Question about reviews</label><textarea id="question" maxLength={1000} value={question} onChange={e=>setQuestion(e.target.value)} placeholder="What negative do most people point to?" rows={3}/><div className="composer-footer"><div className="search-mode"><Picker label="Answer mode" value={searchMode} options={['basic','device','openai']} labels={{basic:'Basic analysis',device:'On-device semantic search · no API fee',openai:'OpenAI RAG · paid API'}} disabled={!!busy||device.working} onChange={v=>setSearchMode(v||'basic')}/></div><button className="btn primary" disabled={!!busy||device.working||!question.trim()}>{busy==='ask'?<Loader2 className="spin" size={16}/>:<ArrowRight size={16}/>} {busy==='ask'?'Finding evidence…':'Ask ReviewLens'}</button></div></form><div className="suggestions">{['What are the most common complaints?','What percentage are two-star?','What do customers like?','What are EU customers saying about login?'].map(q=><button key={q} onClick={()=>ask(q)} disabled={!!busy}>{q}</button>)}</div>{searchMode==='device'&&<div className="index-notice"><span>On-device index: {device.indexed}/{dataset.count}. Numerical answers work immediately; semantic evidence needs the local index.</span><button type="button" className="text-btn" onClick={()=>setTab('settings')}>Set up on-device search</button>{device.error&&<p role="alert">{device.error}</p>}</div>}{searchMode==='openai'&&!configuration.configured&&<p className="notice">OpenAI RAG needs a separately funded API account. ChatGPT Plus does not include API credits. <button type="button" className="text-btn" onClick={()=>setTab('settings')}>Open Settings</button></p>}{searchMode==='openai'&&<div className="index-notice"><span>Semantic index: {indexed}/{dataset.count} reviews</span>{indexed<dataset.count&&<button className="text-btn" disabled={!!busy} onClick={buildIndex}>Prepare semantic search</button>}<Progress value={indexed/dataset.count*100}/></div>}</section>
-     {busy==='ask'?<section className="panel" aria-live="polite"><Skeleton className="h-5 w-1/2 mb-4"/><Skeleton className="h-20"/><p className="muted small">Checking scope and finding evidence…</p></section>:answer?<section className="panel answer-panel" aria-live="polite"><div className="panel-title"><Tag tone={answer.status==='supported'?'green':'amber'}>{answer.status==='supported'?'Evidence available':answer.status==='clarify'?'Clarification needed':answer.status==='unsupported'?'Outside supported scope':'Limited evidence'}</Tag><span className="muted small">{answer.intent}</span></div><h3 className="answered-question">{answer.question}</h3><Scope filters={answer.filters} count={answer.count}/><p className="answer-summary">{answer.summary}</p>{answer.metric&&<div className="answer-metric"><strong>{answer.metric.value===null?'—':answer.metric.value}{answer.metric.unit==='percent'?'%':''}</strong><div>{answer.metric.label}<small>{answer.metric.numerator} / {answer.metric.denominator} · {answer.metric.unit==='average'?'rated reviews':'reviews in scope'}</small></div></div>}{answer.findings.map((f,i)=><div className="finding" key={i}><span className="finding-number">{i+1}</span><div><p>{f.text}</p><div className="reference-list">{f.reviewIds.map(id=>{const r=answer.citations.find(x=>x.id===id);return r?<button key={id} className="citation-pill" onClick={()=>setSource(r)}><BookOpen size={12}/>Review {answer.citations.findIndex(x=>x.id===id)+1}</button>:null;})}</div></div></div>)}{answer.citations.length>0&&<details className="answer-sources"><summary>View all {answer.citations.length} source reviews</summary>{answer.citations.map((r,i)=><button key={r.id} className="source-preview" onClick={()=>setSource(r)}><Tag>{i+1}</Tag><span>{r.text.slice(0,120)}{r.text.length>120?'…':''}</span><Stars rating={r.rating}/></button>)}</details>}<div className="method-note"><CircleHelp size={16}/><div>{answer.notes.map(n=><p key={n}>{n}</p>)}</div></div><div className="answer-footer"><span className="small muted">{answer.model} · {answer.latencyMs||0} ms</span><div className="button-row"><button className={`icon-btn ${answer.feedback==='useful'?'selected':''}`} onClick={()=>feedback('useful')} aria-label="Answer is useful"><ThumbsUp size={16}/></button><button className={`icon-btn ${answer.feedback==='incorrect'?'selected':''}`} onClick={()=>feedback('incorrect')} aria-label="Answer is incorrect"><ThumbsDown size={16}/></button><button className="icon-btn" aria-label="Export answer" onClick={()=>download('reviewlens-answer.md',`# ${answer.question}\n\n${answer.summary}\n\n${answer.findings.map(f=>'- '+f.text).join('\n')}\n\n## Sources\n\n${answer.citations.map(r=>r.id+': '+r.text).join('\n\n')}\n\n${answer.notes.join('\n')}`)}><ArrowDownToLine size={16}/></button></div></div></section>:<div className="quiet-state"><MessageSquare size={30}/><p>Start with a question.<br/><span>Every answer keeps its scope and sources close.</span></p></div>}</div>
-     <aside className="panel history-panel"><p className="eyebrow">YOUR INVESTIGATION</p><h2>Recent questions</h2>{history.length?history.slice(0,15).map(a=><button key={a.id} className={`history-item ${answer?.id===a.id?'active':''}`} onClick={()=>{answerController.current?.abort();requestVersion.current++;setBusy('');setAnswer(a);setQuestion(a.question);}}><MessageSquare size={15}/><div><strong>{a.question}</strong><small>{new Date(a.createdAt).toLocaleDateString()} · {a.count} reviews</small></div></button>):<p className="muted">Questions you ask are saved here with their original scope and evidence.</p>}<div className="history-note"><ShieldCheck size={18}/><p>Saved to this dataset.<br/>Only you can access your workspace.</p></div></aside></div>}</TabsContent>
-    <TabsContent value="explore">{dataset&&<section className="panel"><div className="panel-title"><div><p className="eyebrow">THE SOURCE OF TRUTH</p><h2>Explore reviews <span className="count-label">{reviewed.length}</span></h2></div><div className="button-row"><div className="searchbox"><Search size={16}/><input aria-label="Search exact review text" placeholder="Search review text…" value={filters.search||''} onChange={e=>setFilter('search',e.target.value)}/></div><button className="btn secondary" onClick={()=>download('reviewlens-reviews.json',JSON.stringify(reviewed,null,2),'application/json')}><ArrowDownToLine size={16}/>Export</button></div></div><div className="theme-chips"><button className={!themeFilter?'active':''} onClick={()=>setThemeFilter('')}>All themes</button>{summary.themes.map(t=><button key={t.key} className={themeFilter===t.key?'active':''} onClick={()=>{setThemeFilter(t.key);setPage(0);}}>{t.label} <span>{t.count}</span></button>)}</div><Table><TableHeader><TableRow><TableHead>Review</TableHead><TableHead>Rating</TableHead><TableHead>Product / version</TableHead><TableHead>Region</TableHead><TableHead>Date</TableHead><TableHead><span className="sr-only">Open</span></TableHead></TableRow></TableHeader><TableBody>{reviewed.slice(page*15,page*15+15).map(r=><TableRow key={r.id}><TableCell><button className="review-text" onClick={()=>setSource(r)}>{r.text.slice(0,160)}{r.text.length>160?'…':''}</button><div className="review-tags">{r.aspects.slice(0,2).map(a=><Tag key={a.key} tone={a.sentiment==='negative'?'red':a.sentiment==='positive'?'green':'plain'}>{a.label}</Tag>)}</div></TableCell><TableCell><Stars rating={r.rating}/></TableCell><TableCell>{r.product||'—'}<small className="cell-detail">{r.version||'No version'}</small></TableCell><TableCell>{r.region||'—'}</TableCell><TableCell className="nowrap">{r.date||'—'}</TableCell><TableCell><button className="icon-btn" aria-label={'Open review '+r.id} onClick={()=>setSource(r)}><ArrowUpRight size={16}/></button></TableCell></TableRow>)}</TableBody></Table>{!reviewed.length&&<Empty title="No reviews match" text="Clear a filter or try a different search."/>}<div className="pagination"><span>{reviewed.length?`${page*15+1}–${Math.min(page*15+15,reviewed.length)}`:'0'} of {reviewed.length} reviews</span><div><button className="icon-btn" disabled={!page} aria-label="Previous page" onClick={()=>setPage(p=>p-1)}><ChevronLeft size={18}/></button><button className="icon-btn" disabled={(page+1)*15>=reviewed.length} aria-label="Next page" onClick={()=>setPage(p=>p+1)}><ChevronRight size={18}/></button></div></div></section>}</TabsContent>
-    <TabsContent value="compare">{dataset&&<section className="panel"><div className="panel-title"><div><p className="eyebrow">SEE WHAT CHANGED</p><h2>Compare feedback</h2></div><GitCompareArrows size={23}/></div><p className="muted">Compare two groups within your active filters. Theme changes are measured in percentage points.</p><div className="comparison-controls"><Picker label="Compare by" value={compareField} options={['version','region','product','source']} empty="Choose field" onChange={v=>{setCompareField((v||'version') as typeof compareField);setLeft('');setRight('');}}/><Picker label="Baseline" value={left} options={options(compareField)} empty="Choose baseline" onChange={setLeft}/><ArrowRight size={20}/><Picker label="Comparison" value={right} options={options(compareField)} empty="Choose comparison" onChange={setRight}/></div>{compared?<><div className="comparison-summary"><div><span>{left}</span><strong>{compared.leftAverage??'—'}<small> / 5</small></strong><p>{compared.leftCount} reviews</p></div><div className="delta"><span>Rating change</span><strong className={(compared.delta||0)<0?'negative-text':'positive-text'}>{compared.delta===null?'—':`${compared.delta>0?'+':''}${compared.delta}`}</strong><p>stars</p></div><div><span>{right}</span><strong>{compared.rightAverage??'—'}<small> / 5</small></strong><p>{compared.rightCount} reviews</p></div></div><Table><TableHeader><TableRow><TableHead>Negative theme mentions</TableHead><TableHead>{left}</TableHead><TableHead>{right}</TableHead><TableHead>Change</TableHead></TableRow></TableHeader><TableBody>{compared.themes.map(t=><TableRow key={t.label}><TableCell>{t.label}</TableCell><TableCell>{t.left.toFixed(1)}%</TableCell><TableCell>{t.right.toFixed(1)}%</TableCell><TableCell><Tag tone={t.delta>0?'red':t.delta<0?'green':'plain'}>{t.delta>0?'+':''}{t.delta} pp</Tag></TableCell></TableRow>)}</TableBody></Table><p className="method-note">These are observational differences, not proof of causation. Small groups and rule-based labels can produce misleading changes.</p></>:<Empty title="Choose two different groups" text="Use versions to investigate a release, or regions to compare customer experiences."/>}</section>}</TabsContent>
-    <TabsContent value="quality"><section className="panel"><div className="panel-title"><div><p className="eyebrow">MAKE TRUST MEASURABLE</p><h2>Quality & evaluation</h2></div><button className="btn primary" onClick={evaluate} disabled={!!busy}>{busy==='evaluate'?<Loader2 size={16} className="spin"/>:<Activity size={16}/>}Run acceptance checks</button></div><p className="muted">A reproducible set of distinct checks for the local evidence engine. These checks do not call your AI provider.</p>{evaluation?<><div className="eval-score"><strong>{evaluation.passed}<span> / {evaluation.total}</span></strong><div><h3>Acceptance checks passed</h3><p>{evaluation.version} · {new Date(evaluation.createdAt).toLocaleString()}</p></div><button className="btn secondary" onClick={()=>download('reviewlens-evaluation.json',JSON.stringify(evaluation,null,2),'application/json')}><ArrowDownToLine size={16}/>Export results</button></div><div className="eval-grid">{[...new Set(evaluation.cases.map(c=>c.category))].map(category=>{const cs=evaluation.cases.filter(c=>c.category===category);return <div className="eval-category" key={category}><span>{category}</span><strong>{cs.filter(c=>c.passed).length}/{cs.length}</strong></div>;})}</div><div className="eval-cases">{evaluation.cases.map(c=><details key={c.name}><summary>{c.passed?<CheckCircle2 size={16} className="positive-text"/>:<X size={16} className="negative-text"/>}{c.name}<span>{c.category}</span></summary><p>{c.details}</p></details>)}</div><div className="notice">{evaluation.limitations}</div></>:<Empty title="Know what has been checked" text="Run checks to see whether the shipped engine meets its calculation, scope, and validation contracts."/>}</section><section className="panel"><h2>Quality in your dataset</h2><div className="stat-grid compact"><Metric label="Saved answers" value={String(history.length)} note="Latest 50 answers"/><Metric label="Marked useful" value={String(history.filter(a=>a.feedback==='useful').length)} note="Human feedback"/><Metric label="Flagged incorrect" value={String(history.filter(a=>a.feedback==='incorrect').length)} note="Review these examples"/><Metric label="Average latency" value={history.length?`${Math.round(history.reduce((n,a)=>n+(a.latencyMs||0),0)/history.length)} ms`:'—'} note="Saved answers only"/></div><p className="muted">For launch decisions, add independent human-labelled reviews and evaluate real-model answers for relevance and claim support. Synthetic acceptance checks are not a production accuracy score.</p></section></TabsContent>
-    <TabsContent value="settings">{dataset&&<DevicePanel device={device} count={dataset.count} disabled={!!busy}/>}<SettingsPanel configuration={configuration} usage={usage} onSaved={()=>setRefresh(x=>x+1)}/>{dataset&&<section className="panel"><div className="panel-title"><div><h2>OpenAI semantic index · paid API</h2><p className="muted">Embeddings let questions retrieve related wording, even when the exact words differ.</p></div><Tag tone={indexed===dataset.count?'green':'plain'}>{indexed}/{dataset.count} indexed</Tag></div><Progress value={indexed/dataset.count*100}/><div className="button-row mt-5"><button className="btn primary" disabled={!!busy||!configuration.configured||indexed===dataset.count} onClick={buildIndex}>{busy==='index'?<Loader2 className="spin" size={16}/>:<Layers size={16}/>} {indexed===dataset.count?'Index ready':indexed?'Resume indexing':'Build semantic index'}</button>{busy==='index'&&<button className="btn secondary" onClick={()=>{indexCancel.current=true;}}>Pause after this batch</button>}</div><p className="footnote">Up to 32 reviews per batch. Existing progress is saved. Indexing sends review text to OpenAI and uses your provider account.</p></section>}</TabsContent>
-   </Tabs>
-   <footer className="workspace-footer"><span>ReviewLens <span className="footer-divider">/</span> Evidence before conclusions.</span><span>English reviews · {LIMITS.rows.toLocaleString()} reviews per dataset</span></footer>
-  </main>
-  <ImportDialog open={upload} onOpenChange={setUpload} onImported={id=>{setUpload(false);setSelected(id);setRefresh(x=>x+1);setTab('overview');}}/>
-  <Sheet open={!!source} onOpenChange={open=>{if(!open)setSource(null);}}><SheetContent className="source-sheet"><SheetHeader><SheetTitle>Source review</SheetTitle><SheetDescription>Original text with its stored metadata and feature labels.</SheetDescription></SheetHeader>{source&&<div className="source-body"><div className="button-row"><Stars rating={source.rating}/><Tag>{source.source||'Source not provided'}</Tag></div><blockquote>{source.text}</blockquote><dl>{[['Product',source.product],['Version',source.version],['Region',source.region],['Date',source.date],['Review ID',source.id]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||'Not provided'}</dd></div>)}</dl><h3>Feature-level opinions</h3>{source.aspects.length?source.aspects.map(a=><div className="aspect-detail" key={a.key}><div><strong>{a.label}</strong><Tag tone={a.sentiment==='negative'?'red':a.sentiment==='positive'?'green':'plain'}>{a.sentiment}</Tag></div><p>“{a.evidence}”</p></div>):<p className="muted">No recognised themes were assigned. This does not imply the review contains no useful feedback.</p>}<p className="footnote">Labels are rule-based and may miss nuance. The original text is authoritative.</p></div>}</SheetContent></Sheet>
-  <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete {dataset?.name}?</AlertDialogTitle><AlertDialogDescription>This permanently removes its {dataset?.count} reviews, embeddings, saved answers, and feedback. This cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep dataset</AlertDialogCancel><AlertDialogAction onClick={e=>{e.preventDefault();remove();}} disabled={busy==='delete'}>{busy==='delete'?'Deleting…':'Delete dataset'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
- </div>;
+export default function Workspace() {
+  const [datasets, setDatasets] = useState<Dataset[]>([]),
+    [selected, setSelected] = useState(""),
+    [dataset, setDataset] = useState<Dataset | null>(null),
+    [tab, setTab] = useState("overview"),
+    [filters, setFilters] = useState<Filters>({}),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [refresh, setRefresh] = useState(0);
+  const [upload, setUpload] = useState(false),
+    [busy, setBusy] = useState(""),
+    [deleteOpen, setDeleteOpen] = useState(false),
+    [source, setSource] = useState<Review | null>(null),
+    [history, setHistory] = useState<Answer[]>([]),
+    [answer, setAnswer] = useState<Answer | null>(null),
+    [question, setQuestion] = useState(""),
+    [searchMode, setSearchMode] = useState("basic"),
+    [indexed, setIndexed] = useState(0),
+    [configuration, setConfiguration] = useState({
+      configured: false,
+      keyInvalid: false,
+      model: "gpt-4.1-mini",
+      embeddingModel: "text-embedding-3-small",
+    }),
+    [usage, setUsage] = useState<any>(null),
+    [evaluation, setEvaluation] = useState<EvalResult | null>(null);
+  const [page, setPage] = useState(0),
+    [exploreSearch, setExploreSearch] = useState(""),
+    [themeFilter, setThemeFilter] = useState(""),
+    [compareField, setCompareField] = useState<
+      "version" | "region" | "product" | "source"
+    >("version"),
+    [left, setLeft] = useState(""),
+    [right, setRight] = useState("");
+  const device = useDeviceIndex(dataset);
+  const requestVersion = useRef(0);
+  const answerController = useRef<AbortController | null>(null);
+  const indexCancel = useRef(false);
+  const all = useMemo(() => dataset?.reviews || [], [dataset]),
+    rows = useMemo(() => filterReviews(all, filters), [all, filters]),
+    summary = useMemo(() => stats(rows), [rows]);
+  const options = (field: "product" | "version" | "region" | "source") =>
+    [
+      ...new Set(
+        filterReviews(all, { ...filters, [field]: undefined })
+          .map((r) => r[field])
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    api()
+      .then((data) => {
+        if (!live) return;
+        setDatasets(data.datasets);
+        setConfiguration(data.settings);
+        setUsage(data.usage);
+        setEvaluation(data.evaluation);
+        setSelected((current) =>
+          data.datasets.some((d: Dataset) => d.id === current)
+            ? current
+            : data.datasets[0]?.id || "",
+        );
+        setError("");
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [refresh]);
+  useEffect(() => {
+    const controller = new AbortController();
+    requestVersion.current++;
+    answerController.current?.abort();
+    indexCancel.current = true;
+    setAnswer(null);
+    setBusy("");
+    setFilters({});
+    setThemeFilter("");
+    setExploreSearch("");
+    setPage(0);
+    setSource(null);
+    setHistory([]);
+    setDataset(null);
+    setIndexed(0);
+    setLeft("");
+    setRight("");
+    if (!selected) return;
+    api(
+      undefined,
+      "?dataset=" + encodeURIComponent(selected),
+      controller.signal,
+    )
+      .then((data) => {
+        setDataset(data.dataset);
+        setHistory(data.history);
+        setIndexed(data.indexed);
+        setError("");
+        const vs = [
+          ...new Set<string>(
+            data.dataset.reviews.map((r: Review) => r.version).filter(Boolean),
+          ),
+        ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        setLeft(vs[0] || "");
+        setRight(vs[vs.length - 1] || "");
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e.message);
+      });
+    return () => controller.abort();
+  }, [selected, refresh]);
+  useEffect(() => {
+    setPage(0);
+    requestVersion.current++;
+    answerController.current?.abort();
+    setAnswer(null);
+    setBusy((current) => (current === "ask" ? "" : current));
+  }, [filters, searchMode]);
+  const setFilter = (key: keyof Filters, value: string) =>
+    setFilters((f) => ({ ...f, [key]: value || undefined }));
+  async function loadDemo() {
+    setBusy("demo");
+    try {
+      const r = await api({ action: "demo", uploadId: crypto.randomUUID() });
+      setSelected(r.id);
+      setRefresh((x) => x + 1);
+      toast.success("20 sample reviews are ready.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function refreshUsage() {
+    try {
+      const data = await api();
+      setUsage(data.usage);
+    } catch {
+      /* A usage refresh failure does not invalidate the completed operation. */
+    }
+  }
+  async function ask(q = question) {
+    if (!selected || !q.trim()) return;
+    setQuestion(q);
+    setTab("ask");
+    const version = ++requestVersion.current,
+      controller = new AbortController();
+    answerController.current?.abort();
+    answerController.current = controller;
+    setBusy("ask");
+    setAnswer(null);
+    try {
+      let deviceHits;
+      const base = answerQuestion(all, q, filters);
+      if (searchMode === "device" && needsDeviceEvidence(base)) {
+        deviceHits = await device.search(
+          q,
+          filterReviews(all, base.filters),
+          controller.signal,
+        );
+      }
+      if (controller.signal.aborted) return;
+      const a = await api(
+        {
+          action: "ask",
+          datasetId: selected,
+          question: q,
+          filters,
+          useAI: searchMode === "openai",
+          searchMode,
+          deviceHits,
+        },
+        "",
+        controller.signal,
+      );
+      if (version !== requestVersion.current) return;
+      setAnswer(a);
+      setHistory((h) => [a, ...h].slice(0, 50));
+      if (searchMode === "openai") void refreshUsage();
+    } catch (e) {
+      if (
+        (e as Error).name !== "AbortError" &&
+        version === requestVersion.current
+      )
+        toast.error((e as Error).message);
+    } finally {
+      if (version === requestVersion.current) setBusy("");
+    }
+  }
+  async function buildIndex() {
+    if (!dataset) return;
+    indexCancel.current = false;
+    const id = selected;
+    setBusy("index");
+    try {
+      let n = indexed;
+      while (n < dataset.count && !indexCancel.current) {
+        const r = await api({ action: "index", datasetId: id });
+        if (indexCancel.current) break;
+        n = r.indexed;
+        setIndexed(n);
+        void refreshUsage();
+        if (!r.batch) break;
+      }
+      if (!indexCancel.current) toast.success("Semantic search is ready.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      void refreshUsage();
+      setBusy("");
+    }
+  }
+  async function remove() {
+    if (busy || device.working) return;
+    answerController.current?.abort();
+    indexCancel.current = true;
+    setBusy("delete");
+    try {
+      await api({ action: "delete", datasetId: selected });
+      try {
+        await device.clear(selected);
+      } catch {
+        toast.error(
+          "Dataset deleted. Clear this browser’s site data to remove any remaining device cache.",
+        );
+      }
+      setSelected("");
+      setDataset(null);
+      setRefresh((x) => x + 1);
+      setDeleteOpen(false);
+      toast.success("Dataset and its answers deleted.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function feedback(value: string) {
+    if (!answer) return;
+    try {
+      await api({
+        action: "feedback",
+        datasetId: selected,
+        answerId: answer.id,
+        feedback: value,
+      });
+      setAnswer({ ...answer, feedback: value });
+      setHistory((h) =>
+        h.map((x) => (x.id === answer.id ? { ...x, feedback: value } : x)),
+      );
+      toast.success("Feedback saved.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+  async function evaluate() {
+    setBusy("evaluate");
+    try {
+      const e = await api({ action: "evaluate" });
+      setEvaluation(e);
+      toast.success("Acceptance checks completed.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  const reviewed = (themeFilter
+    ? rows.filter((r) => r.aspects.some((a) => a.key === themeFilter))
+    : rows).filter((r)=>!exploreSearch||r.text.toLowerCase().includes(exploreSearch.toLowerCase()));
+  useEffect(()=>{if(themeFilter&&!summary.themes.some((theme)=>theme.key===themeFilter))setThemeFilter("");},[themeFilter,summary.themes]);
+  const comparisonRows = filterReviews(all, {
+    ...filters,
+    [compareField]: undefined,
+  });
+  const compared =
+    left && right && left !== right
+      ? compare(comparisonRows, compareField, left, right)
+      : null;
+  const negativeThemes = summary.themes.filter((t) => t.negative);
+  return (
+    <div className="app-shell">
+      <Toaster position="bottom-right" theme="light" />
+      <header className="masthead">
+        <Link className="brand" href="/" aria-label="ReviewLens home">
+          <span className="brandmark">
+            <Search size={21} />
+          </span>
+          Review<span>Lens</span>
+          <span className="workspace-label">WORKSPACE</span>
+        </Link>
+        <div className="mast-actions">
+          <span className="private-label">
+            <ShieldCheck size={15} />
+            Private workspace
+          </span>
+          <button
+            className="icon-btn"
+            aria-label="Open settings"
+            onClick={() => setTab("settings")}
+          >
+            <Settings2 size={19} />
+          </button>
+        </div>
+      </header>
+      <main className="workspace">
+        <div className="workspace-heading">
+          <div>
+            <p className="eyebrow">CUSTOMER FEEDBACK / INTELLIGENCE</p>
+            <h1>From reviews to reasons.</h1>
+            <p className="muted">
+              Find the patterns. Check the evidence. Decide what to improve.
+            </p>
+          </div>
+          <button className="btn primary" onClick={() => setUpload(true)}>
+            <Plus size={17} />
+            Import reviews
+          </button>
+        </div>
+        {error && (
+          <div className="notice error" role="alert">
+            <span>{error}</span>
+            <button
+              className="btn secondary"
+              onClick={() => setRefresh((x) => x + 1)}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <div className="loading-grid" aria-label="Loading workspace">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+        ) : !datasets.length && !error ? (
+          <div className="onboarding">
+            <div className="onboarding-copy">
+              <Tag tone="blue">YOUR FIRST DATASET</Tag>
+              <h2>
+                What are your customers
+                <br />
+                really telling you?
+              </h2>
+              <p>
+                Bring your product reviews together, uncover recurring
+                complaints, and get answers you can trace to the source.
+              </p>
+              <div className="button-row">
+                <button
+                  className="btn primary"
+                  onClick={loadDemo}
+                  disabled={!!busy}
+                >
+                  {busy === "demo" ? (
+                    <Loader2 className="spin" size={17} />
+                  ) : (
+                    <Sparkles size={17} />
+                  )}
+                  Try the demo
+                </button>
+                <button
+                  className="btn secondary"
+                  onClick={() => setUpload(true)}
+                >
+                  <FileUp size={17} />
+                  Upload CSV or JSON
+                </button>
+              </div>
+              <p className="small muted">
+                20 sample reviews · No API key needed · Saved privately
+              </p>
+            </div>
+            <div className="sample-card">
+              <span className="eyebrow">AN EXAMPLE OF WHAT YOU’LL FIND</span>
+              <div className="sample-quote">
+                “Checkout still works, but login fails every morning.”
+              </div>
+              <div className="sample-aspect">
+                <span>Checkout & billing</span>
+                <Tag tone="green">Positive</Tag>
+              </div>
+              <div className="sample-aspect">
+                <span>Login & authentication</span>
+                <Tag tone="red">Negative</Tag>
+              </div>
+              <div className="sample-footer">
+                <CheckCircle2 size={16} />
+                Separate opinions about each feature
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {!!datasets.length && (
+          <div className="dataset-bar">
+            <div className="dataset-choice">
+              <Database size={18} />
+              <Picker
+                label="Active dataset"
+                value={selected}
+                options={datasets.map((d) => d.id)}
+                labels={Object.fromEntries(datasets.map((d) => [d.id, d.name]))}
+                onChange={setSelected}
+                empty="Choose a dataset"
+                allowEmpty={false}
+              />
+            </div>
+            <span className="dataset-name">
+              {datasets.find((d) => d.id === selected)?.name}
+            </span>
+            {dataset && (
+              <>
+                <span className="muted small">
+                  {dataset.count.toLocaleString()} reviews ·{" "}
+                  {new Date(dataset.createdAt).toLocaleDateString()}
+                </span>
+                <button
+                  className="icon-btn danger"
+                  aria-label="Delete active dataset"
+                  disabled={!!busy || device.working}
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        <Tabs value={tab} onValueChange={setTab} className="product-tabs">
+          <TabsList variant="line" className="nav-tabs">
+            {[
+              ["overview", "Overview", BarChart3],
+              ["ask", "Ask ReviewLens", MessageSquare],
+              ["explore", "Explore reviews", BookOpen],
+              ["compare", "Compare", GitCompareArrows],
+              ["quality", "Quality", Activity],
+              ["settings", "Settings", Settings2],
+            ].map(([id, label, Icon]) => (
+              <TabsTrigger
+                key={String(id)}
+                value={String(id)}
+                disabled={
+                  !dataset && !["settings", "quality"].includes(String(id))
+                }
+              >
+                <Icon size={16} />
+                {String(label)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {dataset && (
+            <div className="filter-bar">
+              <Filter size={16} />
+              {(["product", "version", "region", "source"] as const).map(
+                (f) => (
+                  <Picker
+                    key={f}
+                    label={f[0].toUpperCase() + f.slice(1)}
+                    value={filters[f] || ""}
+                    options={options(f)}
+                    onChange={(v) => setFilter(f, v)}
+                  />
+                ),
+              )}
+              <Picker
+                label="Rating"
+                value={filters.rating || ""}
+                options={[
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "negative",
+                  "positive",
+                  "unrated",
+                ]}
+                onChange={(v) => setFilter("rating", v)}
+              />
+              <details className="date-filter">
+                <summary>Date range</summary>
+                <div>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={filters.from || ""}
+                      max={filters.to}
+                      onChange={(e) => setFilter("from", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={filters.to || ""}
+                      min={filters.from}
+                      onChange={(e) => setFilter("to", e.target.value)}
+                    />
+                  </label>
+                </div>
+              </details>
+              {Object.values(filters).some(Boolean) && (
+                <button className="text-btn" onClick={() => setFilters({})}>
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
+          <TabsContent value="overview">
+            {dataset && (
+              <>
+                <div className="stat-grid">
+                  <Metric
+                    label="Reviews in scope"
+                    value={summary.count.toLocaleString()}
+                    note={`of ${dataset.count.toLocaleString()} total reviews`}
+                  />
+                  <Metric
+                    label="Average rating"
+                    value={
+                      summary.average === null
+                        ? "—"
+                        : summary.average.toFixed(2)
+                    }
+                    note={`${summary.rated} rated · ${summary.unrated} unrated`}
+                    icon={<Star size={18} />}
+                  />
+                  <Metric
+                    label="Low-rated reviews"
+                    value={summary.negative.toLocaleString()}
+                    note="1–2 stars · rating-based"
+                  />
+                  <Metric
+                    label="Theme coverage"
+                    value={`${Math.round(summary.coverage * 100)}%`}
+                    note="Reviews matching a recognised theme"
+                  />
+                </div>
+                <div className="two-col">
+                  <section className="panel">
+                    <div className="panel-title">
+                      <div>
+                        <p className="eyebrow">WHERE TO LOOK FIRST</p>
+                        <h2>Leading complaints</h2>
+                      </div>
+                      <Tag>{summary.count} reviews</Tag>
+                    </div>
+                    {negativeThemes.length ? (
+                      negativeThemes.slice(0, 6).map((t, i) => (
+                        <button
+                          className="theme-row"
+                          key={t.key}
+                          onClick={() => {
+                            setThemeFilter(t.key);
+                            setPage(0);
+                            setTab("explore");
+                          }}
+                        >
+                          <span className="rank">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <div className="theme-main">
+                            <div>
+                              <strong>{t.label}</strong>
+                              <span>
+                                {t.negative} <small>reviews</small>
+                              </span>
+                            </div>
+                            <div className="bar-track">
+                              <div style={{ width: `${t.share}%` }} />
+                            </div>
+                          </div>
+                          <span className="theme-share">
+                            {t.share.toFixed(0)}%
+                          </span>
+                          <ArrowUpRight size={16} />
+                        </button>
+                      ))
+                    ) : (
+                      <Empty
+                        title="No negative themes in this scope"
+                        text="Try broader filters or inspect reviews that were not classified."
+                      />
+                    )}
+                    <p className="footnote">
+                      Negative feature mentions across all scoped reviews.
+                      Reviews can discuss multiple themes.
+                    </p>
+                  </section>
+                  <section className="panel rating-panel">
+                    <div className="panel-title">
+                      <div>
+                        <p className="eyebrow">THE BIG PICTURE</p>
+                        <h2>Rating distribution</h2>
+                      </div>
+                      <Star size={19} />
+                    </div>
+                    <div className="rating-number">
+                      {summary.average?.toFixed(2) ?? "—"}
+                      <span>/ 5</span>
+                    </div>
+                    {[5, 4, 3, 2, 1].map((n) => (
+                      <div className="rating-row" key={n}>
+                        <span>
+                          {n}
+                          <Star size={12} />
+                        </span>
+                        <div className="bar-track">
+                          <div
+                            style={{
+                              width: `${summary.rated ? (summary.distribution[n - 1] / summary.rated) * 100 : 0}%`,
+                            }}
+                          />
+                        </div>
+                        <strong>{summary.distribution[n - 1]}</strong>
+                      </div>
+                    ))}
+                    <p className="footnote">
+                      {summary.unrated} unrated reviews excluded. Fractional
+                      ratings are rounded in this chart only.
+                    </p>
+                  </section>
+                </div>
+                <div className="insight-strip">
+                  <Sparkles size={24} />
+                  <div>
+                    <h3>Go beyond the average.</h3>
+                    <p>
+                      Ask what’s behind the ratings, then open the original
+                      reviews.
+                    </p>
+                  </div>
+                  <button
+                    className="btn primary"
+                    disabled={!!busy || device.working}
+                    onClick={() => ask("What are the most common complaints?")}
+                  >
+                    Ask about complaints
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                <section className="panel">
+                  <div className="panel-title">
+                    <div>
+                      <p className="eyebrow">FROM FINDING TO FOLLOW-UP</p>
+                      <h2>Investigation priorities</h2>
+                    </div>
+                    <ExportBrief dataset={dataset} rows={rows} />
+                  </div>
+                  <div className="priority-grid">
+                    {negativeThemes.slice(0, 3).map((t) => (
+                      <div className="priority" key={t.key}>
+                        <Tag tone="blue">{t.negative} negative mentions</Tag>
+                        <h3>{t.label}</h3>
+                        <p>
+                          Validate the reported cases, assign an owner, and
+                          track the negative mention rate after a change.
+                        </p>
+                        <button
+                          className="text-btn"
+                          disabled={!!busy || device.working}
+                          onClick={() =>
+                            ask(
+                              `What are customers saying about ${TAXONOMY.find((x) => x.key === t.key)?.terms[0]}?`,
+                            )
+                          }
+                        >
+                          Inspect evidence <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="footnote">
+                    Suggested investigations, not validated root causes or
+                    automatically created tasks.
+                  </p>
+                </section>
+              </>
+            )}
+          </TabsContent>
+          <TabsContent value="ask">
+            {dataset && (
+              <div className="ask-layout">
+                <div>
+                  <section className="panel ask-composer">
+                    <div className="panel-title">
+                      <div>
+                        <p className="eyebrow">ASK YOUR REVIEWS</p>
+                        <h2>What would you like to understand?</h2>
+                      </div>
+                      <Sparkles size={23} />
+                    </div>
+                    <Scope count={rows.length} filters={filters} />
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        ask();
+                      }}
+                    >
+                      <label className="sr-only" htmlFor="question">
+                        Question about reviews
+                      </label>
+                      <textarea
+                        id="question"
+                        maxLength={1000}
+                        value={question}
+                        onChange={(e) => setQuestion(e.target.value)}
+                        placeholder="What negative do most people point to?"
+                        rows={3}
+                      />
+                      <div className="composer-footer">
+                        <div className="search-mode">
+                          <Picker
+                            label="Answer mode"
+                            value={searchMode}
+                            options={["basic", "device", "openai"]}
+                            labels={{
+                              basic: "Basic analysis",
+                              device: "On-device semantic search · no API fee",
+                              openai: "OpenAI RAG · paid API",
+                            }}
+                            allowEmpty={false}
+                            disabled={!!busy || device.working}
+                            onChange={(v) => setSearchMode(v || "basic")}
+                          />
+                        </div>
+                        <button
+                          className="btn primary"
+                          disabled={
+                            !!busy || device.working || !question.trim()
+                          }
+                        >
+                          {busy === "ask" ? (
+                            <Loader2 className="spin" size={16} />
+                          ) : (
+                            <ArrowRight size={16} />
+                          )}{" "}
+                          {busy === "ask"
+                            ? "Finding evidence…"
+                            : "Ask ReviewLens"}
+                        </button>
+                      </div>
+                    </form>
+                    <div className="suggestions">
+                      {[
+                        "What are the most common complaints?",
+                        "What percentage are two-star?",
+                        "What do customers like?",
+                        "What are EU customers saying about login?",
+                      ].map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => ask(q)}
+                          disabled={!!busy || device.working}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                    {searchMode === "device" && (
+                      <div className="index-notice">
+                        <span>
+                          On-device index: {device.indexed}/{dataset.count}.
+                          Numerical answers work immediately; semantic evidence
+                          needs the local index.
+                        </span>
+                        <button
+                          type="button"
+                          className="text-btn"
+                          onClick={() => setTab("settings")}
+                        >
+                          Set up on-device search
+                        </button>
+                        {device.error && <p role="alert">{device.error}</p>}
+                      </div>
+                    )}
+                    {searchMode === "openai" && !configuration.configured && (
+                      <p className="notice">
+                        OpenAI RAG needs a separately funded API account.
+                        ChatGPT Plus does not include API credits.{" "}
+                        <button
+                          type="button"
+                          className="text-btn"
+                          onClick={() => setTab("settings")}
+                        >
+                          Open Settings
+                        </button>
+                      </p>
+                    )}
+                    {searchMode === "openai" && (
+                      <div className="index-notice">
+                        <span>
+                          Semantic index: {indexed}/{dataset.count} reviews
+                        </span>
+                        {indexed < dataset.count && (
+                          <button
+                            className="text-btn"
+                            disabled={!!busy}
+                            onClick={buildIndex}
+                          >
+                            Prepare semantic search
+                          </button>
+                        )}
+                        <Progress value={(indexed / dataset.count) * 100} />
+                      </div>
+                    )}
+                  </section>
+                  {busy === "ask" ? (
+                    <section className="panel" aria-live="polite">
+                      <Skeleton className="h-5 w-1/2 mb-4" />
+                      <Skeleton className="h-20" />
+                      <p className="muted small">
+                        Checking scope and finding evidence…
+                      </p>
+                    </section>
+                  ) : answer ? (
+                    <section className="panel answer-panel" aria-live="polite">
+                      <div className="panel-title">
+                        <Tag
+                          tone={
+                            answer.status === "supported" ? "green" : "amber"
+                          }
+                        >
+                          {answer.status === "supported"
+                            ? "Evidence available"
+                            : answer.status === "clarify"
+                              ? "Clarification needed"
+                              : answer.status === "unsupported"
+                                ? "Outside supported scope"
+                                : "Limited evidence"}
+                        </Tag>
+                        <span className="muted small">{answer.intent}</span>
+                      </div>
+                      <h3 className="answered-question">{answer.question}</h3>
+                      <Scope filters={answer.filters} count={answer.count} />
+                      <p className="answer-summary">{answer.summary}</p>
+                      {answer.metric && (
+                        <div className="answer-metric">
+                          <strong>
+                            {answer.metric.value === null
+                              ? "—"
+                              : answer.metric.value}
+                            {answer.metric.unit === "percent" ? "%" : ""}
+                          </strong>
+                          <div>
+                            {answer.metric.label}
+                            <small>
+                              {answer.metric.numerator} /{" "}
+                              {answer.metric.denominator} ·{" "}
+                              {answer.metric.unit === "average"
+                                ? "rated reviews"
+                                : "reviews in scope"}
+                            </small>
+                          </div>
+                        </div>
+                      )}
+                      {answer.findings.map((f, i) => (
+                        <div className="finding" key={i}>
+                          <span className="finding-number">{i + 1}</span>
+                          <div>
+                            <p>{f.text}</p>
+                            <div className="reference-list">
+                              {f.reviewIds.map((id) => {
+                                const r = answer.citations.find(
+                                  (x) => x.id === id,
+                                );
+                                return r ? (
+                                  <button
+                                    key={id}
+                                    className="citation-pill"
+                                    onClick={() => setSource(r)}
+                                  >
+                                    <BookOpen size={12} />
+                                    Review{" "}
+                                    {answer.citations.findIndex(
+                                      (x) => x.id === id,
+                                    ) + 1}
+                                  </button>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {answer.citations.length > 0 && (
+                        <details className="answer-sources">
+                          <summary>
+                            View all {answer.citations.length} source reviews
+                          </summary>
+                          {answer.citations.map((r, i) => (
+                            <button
+                              key={r.id}
+                              className="source-preview"
+                              onClick={() => setSource(r)}
+                            >
+                              <Tag>{i + 1}</Tag>
+                              <span>
+                                {r.text.slice(0, 120)}
+                                {r.text.length > 120 ? "…" : ""}
+                              </span>
+                              <Stars rating={r.rating} />
+                            </button>
+                          ))}
+                        </details>
+                      )}
+                      <div className="method-note">
+                        <CircleHelp size={16} />
+                        <div>
+                          {answer.notes.map((n) => (
+                            <p key={n}>{n}</p>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="answer-footer">
+                        <span className="small muted">
+                          {answer.model} · {answer.latencyMs || 0} ms
+                        </span>
+                        <div className="button-row">
+                          <button
+                            className={`icon-btn ${answer.feedback === "useful" ? "selected" : ""}`}
+                            onClick={() => feedback("useful")}
+                            aria-label="Answer is useful"
+                          >
+                            <ThumbsUp size={16} />
+                          </button>
+                          <button
+                            className={`icon-btn ${answer.feedback === "incorrect" ? "selected" : ""}`}
+                            onClick={() => feedback("incorrect")}
+                            aria-label="Answer is incorrect"
+                          >
+                            <ThumbsDown size={16} />
+                          </button>
+                          <button
+                            className="icon-btn"
+                            aria-label="Export answer"
+                            onClick={() =>
+                              download(
+                                "reviewlens-answer.md",
+                                `# ${answer.question}\n\n${answer.summary}\n\n${answer.findings.map((f) => "- " + f.text).join("\n")}\n\n## Sources\n\n${answer.citations.map((r) => r.id + ": " + r.text).join("\n\n")}\n\n${answer.notes.join("\n")}`,
+                              )
+                            }
+                          >
+                            <ArrowDownToLine size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  ) : (
+                    <div className="quiet-state">
+                      <MessageSquare size={30} />
+                      <p>
+                        Start with a question.
+                        <br />
+                        <span>
+                          Every answer keeps its scope and sources close.
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <aside className="panel history-panel">
+                  <p className="eyebrow">YOUR INVESTIGATION</p>
+                  <h2>Recent questions</h2>
+                  {history.length ? (
+                    history.slice(0, 15).map((a) => (
+                      <button
+                        key={a.id}
+                        className={`history-item ${answer?.id === a.id ? "active" : ""}`}
+                        onClick={() => {
+                          answerController.current?.abort();
+                          requestVersion.current++;
+                          setBusy("");
+                          setAnswer(a);
+                          setQuestion(a.question);
+                        }}
+                      >
+                        <MessageSquare size={15} />
+                        <div>
+                          <strong>{a.question}</strong>
+                          <small>
+                            {new Date(a.createdAt).toLocaleDateString()} ·{" "}
+                            {a.count} reviews
+                          </small>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="muted">
+                      Questions you ask are saved here with their original scope
+                      and evidence.
+                    </p>
+                  )}
+                  <div className="history-note">
+                    <ShieldCheck size={18} />
+                    <p>
+                      Saved to this dataset.
+                      <br />
+                      Only you can access your workspace.
+                    </p>
+                  </div>
+                </aside>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="explore">
+            {dataset && (
+              <section className="panel">
+                <div className="panel-title">
+                  <div>
+                    <p className="eyebrow">THE SOURCE OF TRUTH</p>
+                    <h2>
+                      Explore reviews{" "}
+                      <span className="count-label">{reviewed.length}</span>
+                    </h2>
+                  </div>
+                  <div className="button-row">
+                    <div className="searchbox">
+                      <Search size={16} />
+                      <input
+                        aria-label="Search exact review text"
+                        placeholder="Search review text…"
+                        value={exploreSearch}
+                        maxLength={200}
+                        onChange={(e) => {setExploreSearch(e.target.value);setPage(0);}}
+                      />
+                    </div>
+                    <button
+                      className="btn secondary"
+                      onClick={() =>
+                        download(
+                          "reviewlens-reviews.json",
+                          JSON.stringify(reviewed, null, 2),
+                          "application/json",
+                        )
+                      }
+                    >
+                      <ArrowDownToLine size={16} />
+                      Export
+                    </button>
+                  </div>
+                </div>
+                <div className="theme-chips">
+                  <button
+                    className={!themeFilter ? "active" : ""}
+                    onClick={() => setThemeFilter("")}
+                  >
+                    All themes
+                  </button>
+                  {summary.themes.map((t) => (
+                    <button
+                      key={t.key}
+                      className={themeFilter === t.key ? "active" : ""}
+                      onClick={() => {
+                        setThemeFilter(t.key);
+                        setPage(0);
+                      }}
+                    >
+                      {t.label} <span>{t.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Review</TableHead>
+                      <TableHead>Rating</TableHead>
+                      <TableHead>Product / version</TableHead>
+                      <TableHead>Region</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>
+                        <span className="sr-only">Open</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reviewed.slice(page * 15, page * 15 + 15).map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <button
+                            className="review-text"
+                            onClick={() => setSource(r)}
+                          >
+                            {r.text.slice(0, 160)}
+                            {r.text.length > 160 ? "…" : ""}
+                          </button>
+                          <div className="review-tags">
+                            {r.aspects.slice(0, 2).map((a) => (
+                              <Tag
+                                key={a.key}
+                                tone={
+                                  a.sentiment === "negative"
+                                    ? "red"
+                                    : a.sentiment === "positive"
+                                      ? "green"
+                                      : "plain"
+                                }
+                              >
+                                {a.label}
+                              </Tag>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Stars rating={r.rating} />
+                        </TableCell>
+                        <TableCell>
+                          {r.product || "—"}
+                          <small className="cell-detail">
+                            {r.version || "No version"}
+                          </small>
+                        </TableCell>
+                        <TableCell>{r.region || "—"}</TableCell>
+                        <TableCell className="nowrap">
+                          {r.date || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            className="icon-btn"
+                            aria-label={"Open review " + r.id}
+                            onClick={() => setSource(r)}
+                          >
+                            <ArrowUpRight size={16} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {!reviewed.length && (
+                  <Empty
+                    title="No reviews match"
+                    text="Clear a filter or try a different search."
+                  />
+                )}
+                <div className="pagination">
+                  <span>
+                    {reviewed.length
+                      ? `${page * 15 + 1}–${Math.min(page * 15 + 15, reviewed.length)}`
+                      : "0"}{" "}
+                    of {reviewed.length} reviews
+                  </span>
+                  <div>
+                    <button
+                      className="icon-btn"
+                      disabled={!page}
+                      aria-label="Previous page"
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      className="icon-btn"
+                      disabled={(page + 1) * 15 >= reviewed.length}
+                      aria-label="Next page"
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+          </TabsContent>
+          <TabsContent value="compare">
+            {dataset && (
+              <section className="panel">
+                <div className="panel-title">
+                  <div>
+                    <p className="eyebrow">SEE WHAT CHANGED</p>
+                    <h2>Compare feedback</h2>
+                  </div>
+                  <GitCompareArrows size={23} />
+                </div>
+                <p className="muted">
+                  Compare two groups within your active filters. Theme changes
+                  are measured in percentage points.
+                </p>
+                <div className="comparison-controls">
+                  <Picker
+                    label="Compare by"
+                    value={compareField}
+                    options={["version", "region", "product", "source"]}
+                    empty="Choose field"
+                    onChange={(v) => {
+                      setCompareField((v || "version") as typeof compareField);
+                      setLeft("");
+                      setRight("");
+                    }}
+                    allowEmpty={false}
+                  />
+                  <Picker
+                    label="Baseline"
+                    value={left}
+                    options={options(compareField)}
+                    empty="Choose baseline"
+                    onChange={setLeft}
+                  />
+                  <ArrowRight size={20} />
+                  <Picker
+                    label="Comparison"
+                    value={right}
+                    options={options(compareField)}
+                    empty="Choose comparison"
+                    onChange={setRight}
+                  />
+                </div>
+                {compared ? (
+                  <>
+                    <div className="comparison-summary">
+                      <div>
+                        <span>{left}</span>
+                        <strong>
+                          {compared.leftAverage ?? "—"}
+                          <small> / 5</small>
+                        </strong>
+                        <p>{compared.leftCount} reviews</p>
+                      </div>
+                      <div className="delta">
+                        <span>Rating change</span>
+                        <strong
+                          className={
+                            (compared.delta || 0) < 0
+                              ? "negative-text"
+                              : "positive-text"
+                          }
+                        >
+                          {compared.delta === null
+                            ? "—"
+                            : `${compared.delta > 0 ? "+" : ""}${compared.delta}`}
+                        </strong>
+                        <p>stars</p>
+                      </div>
+                      <div>
+                        <span>{right}</span>
+                        <strong>
+                          {compared.rightAverage ?? "—"}
+                          <small> / 5</small>
+                        </strong>
+                        <p>{compared.rightCount} reviews</p>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Negative theme mentions</TableHead>
+                          <TableHead>{left}</TableHead>
+                          <TableHead>{right}</TableHead>
+                          <TableHead>Change</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {compared.themes.map((t) => (
+                          <TableRow key={t.label}>
+                            <TableCell>{t.label}</TableCell>
+                            <TableCell>{t.left.toFixed(1)}%</TableCell>
+                            <TableCell>{t.right.toFixed(1)}%</TableCell>
+                            <TableCell>
+                              <Tag
+                                tone={
+                                  t.delta > 0
+                                    ? "red"
+                                    : t.delta < 0
+                                      ? "green"
+                                      : "plain"
+                                }
+                              >
+                                {t.delta > 0 ? "+" : ""}
+                                {t.delta} pp
+                              </Tag>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <p className="method-note">
+                      These are observational differences, not proof of
+                      causation. Small groups and rule-based labels can produce
+                      misleading changes.
+                    </p>
+                  </>
+                ) : (
+                  <Empty
+                    title="Choose two different groups"
+                    text="Use versions to investigate a release, or regions to compare customer experiences."
+                  />
+                )}
+              </section>
+            )}
+          </TabsContent>
+          <TabsContent value="quality">
+            <section className="panel">
+              <div className="panel-title">
+                <div>
+                  <p className="eyebrow">MAKE TRUST MEASURABLE</p>
+                  <h2>Quality & evaluation</h2>
+                </div>
+                <button
+                  className="btn primary"
+                  onClick={evaluate}
+                  disabled={!!busy}
+                >
+                  {busy === "evaluate" ? (
+                    <Loader2 size={16} className="spin" />
+                  ) : (
+                    <Activity size={16} />
+                  )}
+                  Run acceptance checks
+                </button>
+              </div>
+              <p className="muted">
+                A reproducible set of distinct checks for the local evidence
+                engine. These checks do not call your AI provider.
+              </p>
+              {evaluation ? (
+                <>
+                  <div className="eval-score">
+                    <strong>
+                      {evaluation.passed}
+                      <span> / {evaluation.total}</span>
+                    </strong>
+                    <div>
+                      <h3>Acceptance checks passed</h3>
+                      <p>
+                        {evaluation.version} ·{" "}
+                        {new Date(evaluation.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      className="btn secondary"
+                      onClick={() =>
+                        download(
+                          "reviewlens-evaluation.json",
+                          JSON.stringify(evaluation, null, 2),
+                          "application/json",
+                        )
+                      }
+                    >
+                      <ArrowDownToLine size={16} />
+                      Export results
+                    </button>
+                  </div>
+                  <div className="eval-grid">
+                    {[...new Set(evaluation.cases.map((c) => c.category))].map(
+                      (category) => {
+                        const cs = evaluation.cases.filter(
+                          (c) => c.category === category,
+                        );
+                        return (
+                          <div className="eval-category" key={category}>
+                            <span>{category}</span>
+                            <strong>
+                              {cs.filter((c) => c.passed).length}/{cs.length}
+                            </strong>
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                  <div className="eval-cases">
+                    {evaluation.cases.map((c) => (
+                      <details key={c.name}>
+                        <summary>
+                          {c.passed ? (
+                            <CheckCircle2 size={16} className="positive-text" />
+                          ) : (
+                            <X size={16} className="negative-text" />
+                          )}
+                          {c.name}
+                          <span>{c.category}</span>
+                        </summary>
+                        <p>{c.details}</p>
+                      </details>
+                    ))}
+                  </div>
+                  <div className="notice">{evaluation.limitations}</div>
+                </>
+              ) : (
+                <Empty
+                  title="Know what has been checked"
+                  text="Run checks to see whether the shipped engine meets its calculation, scope, and validation contracts."
+                />
+              )}
+            </section>
+            <section className="panel">
+              <h2>Quality in your dataset</h2>
+              <div className="stat-grid compact">
+                <Metric
+                  label="Saved answers"
+                  value={String(history.length)}
+                  note="Latest 50 answers"
+                />
+                <Metric
+                  label="Marked useful"
+                  value={String(
+                    history.filter((a) => a.feedback === "useful").length,
+                  )}
+                  note="Human feedback"
+                />
+                <Metric
+                  label="Flagged incorrect"
+                  value={String(
+                    history.filter((a) => a.feedback === "incorrect").length,
+                  )}
+                  note="Review these examples"
+                />
+                <Metric
+                  label="Average latency"
+                  value={
+                    history.length
+                      ? `${Math.round(history.reduce((n, a) => n + (a.latencyMs || 0), 0) / history.length)} ms`
+                      : "—"
+                  }
+                  note="Saved answers only"
+                />
+              </div>
+              <p className="muted">
+                For launch decisions, add independent human-labelled reviews and
+                evaluate real-model answers for relevance and claim support.
+                Synthetic acceptance checks are not a production accuracy score.
+              </p>
+            </section>
+          </TabsContent>
+          <TabsContent value="settings">
+            {dataset && (
+              <DevicePanel
+                device={device}
+                count={dataset.count}
+                disabled={!!busy}
+              />
+            )}
+            <SettingsPanel
+              configuration={configuration}
+              usage={usage}
+              onSaved={() => {void api().then((data)=>{setDatasets(data.datasets);setConfiguration(data.settings);setUsage(data.usage);setEvaluation(data.evaluation);}).catch((e)=>toast.error((e as Error).message));}}
+            />
+            {dataset && (
+              <section className="panel">
+                <div className="panel-title">
+                  <div>
+                    <h2>OpenAI semantic index · paid API</h2>
+                    <p className="muted">
+                      Embeddings let questions retrieve related wording, even
+                      when the exact words differ.
+                    </p>
+                  </div>
+                  <Tag tone={indexed === dataset.count ? "green" : "plain"}>
+                    {indexed}/{dataset.count} indexed
+                  </Tag>
+                </div>
+                <Progress value={(indexed / dataset.count) * 100} />
+                <div className="button-row mt-5">
+                  <button
+                    className="btn primary"
+                    disabled={
+                      !!busy ||
+                      !configuration.configured ||
+                      indexed === dataset.count
+                    }
+                    onClick={buildIndex}
+                  >
+                    {busy === "index" ? (
+                      <Loader2 className="spin" size={16} />
+                    ) : (
+                      <Layers size={16} />
+                    )}{" "}
+                    {indexed === dataset.count
+                      ? "Index ready"
+                      : indexed
+                        ? "Resume indexing"
+                        : "Build semantic index"}
+                  </button>
+                  {busy === "index" && (
+                    <button
+                      className="btn secondary"
+                      onClick={() => {
+                        indexCancel.current = true;
+                      }}
+                    >
+                      Pause after this batch
+                    </button>
+                  )}
+                </div>
+                <p className="footnote">
+                  Up to 32 reviews per batch. Existing progress is saved.
+                  Indexing sends review text to OpenAI and uses your provider
+                  account.
+                </p>
+              </section>
+            )}
+          </TabsContent>
+        </Tabs>
+        <footer className="workspace-footer">
+          <span>
+            ReviewLens <span className="footer-divider">/</span> Evidence before
+            conclusions.
+          </span>
+          <span>
+            English reviews · {LIMITS.rows.toLocaleString()} reviews per dataset
+          </span>
+        </footer>
+      </main>
+      <ImportDialog
+        open={upload}
+        onOpenChange={setUpload}
+        onImported={(id) => {
+          setUpload(false);
+          setSelected(id);
+          setRefresh((x) => x + 1);
+          setTab("overview");
+        }}
+      />
+      <Sheet
+        open={!!source}
+        onOpenChange={(open) => {
+          if (!open) setSource(null);
+        }}
+      >
+        <SheetContent className="source-sheet">
+          <SheetHeader>
+            <SheetTitle>Source review</SheetTitle>
+            <SheetDescription>
+              Original text with its stored metadata and feature labels.
+            </SheetDescription>
+          </SheetHeader>
+          {source && (
+            <div className="source-body">
+              <div className="button-row">
+                <Stars rating={source.rating} />
+                <Tag>{source.source || "Source not provided"}</Tag>
+              </div>
+              <blockquote>{source.text}</blockquote>
+              <dl>
+                {[
+                  ["Product", source.product],
+                  ["Version", source.version],
+                  ["Region", source.region],
+                  ["Date", source.date],
+                  ["Review ID", source.id],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{k}</dt>
+                    <dd>{v || "Not provided"}</dd>
+                  </div>
+                ))}
+              </dl>
+              <h3>Feature-level opinions</h3>
+              {source.aspects.length ? (
+                source.aspects.map((a) => (
+                  <div className="aspect-detail" key={a.key}>
+                    <div>
+                      <strong>{a.label}</strong>
+                      <Tag
+                        tone={
+                          a.sentiment === "negative"
+                            ? "red"
+                            : a.sentiment === "positive"
+                              ? "green"
+                              : "plain"
+                        }
+                      >
+                        {a.sentiment}
+                      </Tag>
+                    </div>
+                    <p>“{a.evidence}”</p>
+                  </div>
+                ))
+              ) : (
+                <p className="muted">
+                  No recognised themes were assigned. This does not imply the
+                  review contains no useful feedback.
+                </p>
+              )}
+              <p className="footnote">
+                Labels are rule-based and may miss nuance. The original text is
+                authoritative.
+              </p>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {dataset?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes its {dataset?.count} reviews, embeddings,
+              saved answers, and feedback. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep dataset</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                remove();
+              }}
+              disabled={busy === "delete"}
+            >
+              {busy === "delete" ? "Deleting…" : "Delete dataset"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
-function Metric({label,value,note,icon}:{label:string;value:string;note:string;icon?:React.ReactNode}){return <div className="metric"><span>{label}{icon}</span><strong>{value}</strong><p>{note}</p></div>;}
-function Empty({title,text}:{title:string;text:string}){return <div className="empty"><Search size={25}/><h3>{title}</h3><p>{text}</p></div>;}
-function ImportDialog({open,onOpenChange,onImported}:{open:boolean;onOpenChange:(v:boolean)=>void;onImported:(id:string)=>void}){
- const [parsed,setParsed]=useState<ParsedFile|null>(null),[mapping,setMapping]=useState<Mapping|null>(null),[filename,setFilename]=useState(''),[content,setContent]=useState(''),[name,setName]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[result,setResult]=useState<any>(null);const uploadId=useRef('');
- const preview=useMemo(()=>{if(!parsed||!mapping)return null;try{return normalizeImport(parsed,mapping);}catch{return null;}},[parsed,mapping]);
- useEffect(()=>{if(open){setParsed(null);setMapping(null);setFilename('');setContent('');setName('');setResult(null);setError('');uploadId.current=crypto.randomUUID();}},[open]);
- async function read(file:File){setError('');if(file.size>LIMITS.bytes){setError('Choose a CSV or JSON file smaller than 2 MB.');return;}try{const text=await file.text(),p=parseFile(text,file.name);setContent(text);setFilename(file.name);setParsed(p);setMapping(guessMapping(p.headers));setName(file.name.replace(/\.[^.]+$/,''));}catch(e){setError((e as Error).message);}}
- async function save(){setBusy(true);setError('');try{const r=await api({action:'import',uploadId:uploadId.current,name,content,filename,mapping});setResult(r);if(!r.issues?.length){toast.success(`${r.accepted} reviews imported.`);onImported(r.id);}}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- return <Dialog open={open} onOpenChange={v=>{if(!busy)onOpenChange(v);}}><DialogContent className="import-dialog"><DialogHeader><DialogTitle>Import your reviews</DialogTitle><DialogDescription>CSV or JSON · Up to 2 MB and 2,000 reviews · English-language analysis</DialogDescription></DialogHeader>{error&&<div className="notice error" role="alert">{error}</div>}{result?<><div className="notice"><CheckCircle2 size={18}/>{result.accepted} accepted · {result.duplicates} duplicates skipped · {result.issues.length} errors shown</div><div className="import-issues">{result.issues.map((x:any,i:number)=><p key={i}>Row {x.row}: {x.message}</p>)}</div><button className="btn primary" onClick={()=>onImported(result.id)}>Open dataset<ArrowRight size={16}/></button></>:!parsed?<><label className="upload-zone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const file=e.dataTransfer.files[0];if(file)read(file);}}><FileUp size={32}/><strong>Choose a file or drop it here</strong><span>Review text is required. Ratings and metadata are optional.</span><input type="file" accept=".csv,.json" onChange={e=>{if(e.target.files?.[0])read(e.target.files[0]);}}/></label><button className="text-btn" onClick={()=>download('reviewlens-sample.csv',demoCsv(),'text/csv')}><ArrowDownToLine size={15}/>Download a sample CSV</button><p className="footnote">Uploaded text is saved privately. On-device indexing runs in your browser. Text is sent to OpenAI only when you explicitly choose OpenAI indexing or OpenAI RAG.</p></>:<><div className="file-chosen"><CheckCircle2 size={18}/><strong>{filename}</strong><button className="text-btn" onClick={()=>setParsed(null)}>Change file</button></div><label className="form-label">Dataset name<input value={name} maxLength={100} onChange={e=>setName(e.target.value)}/></label><div className="mapping-grid">{Object.keys(mapping!).map(k=><Picker key={k} label={k==='text'?'Review text *':k[0].toUpperCase()+k.slice(1)} value={mapping![k as keyof Mapping]} options={parsed.headers} empty="Not mapped" onChange={v=>setMapping(m=>({...m!,[k]:v}))}/>)}</div><div className="preview-box"><p className="eyebrow">PREVIEW</p>{preview?.reviews.slice(0,2).map((r,i)=><div key={i}><Stars rating={r.rating}/><p>{r.text.slice(0,200)}</p></div>)}<p className="small">{preview?.reviews.length||0} valid reviews · {preview?.duplicates||0} duplicates · {preview?.issues.length||parsed.issues.length} rejected rows</p></div>{preview?.issues.length? <details className="import-issues"><summary>Review validation issues</summary>{preview.issues.slice(0,20).map((x,i)=><p key={i}>Row {x.row}: {x.message}</p>)}</details>:null}<button className="btn primary" onClick={save} disabled={busy||!preview?.reviews.length||!name.trim()}>{busy?<Loader2 size={16} className="spin"/>:<Check size={16}/>} {busy?'Saving and analysing…':'Import '+(preview?.reviews.length||0)+' reviews'}</button></>}</DialogContent></Dialog>;
+function Metric({
+  label,
+  value,
+  note,
+  icon,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="metric">
+      <span>
+        {label}
+        {icon}
+      </span>
+      <strong>{value}</strong>
+      <p>{note}</p>
+    </div>
+  );
 }
-function SettingsPanel({configuration,usage,onSaved}:{configuration:{configured:boolean;model:string};usage:any;onSaved:()=>void}){const [key,setKey]=useState(''),[model,setModel]=useState(configuration.model),[saving,setSaving]=useState(false);useEffect(()=>setModel(configuration.model),[configuration.model]);async function save(removeKey=false){setSaving(true);try{await api({action:'settings',key,model,removeKey});setKey('');onSaved();toast.success(removeKey?'API key removed.':'AI settings saved.');}catch(e){toast.error((e as Error).message);}finally{setSaving(false);}}
- return <div className="settings-grid"><section className="panel"><div className="panel-title"><div><p className="eyebrow">OPTIONAL AI CONNECTION</p><h2>Models & access</h2></div><Tag tone={configuration.configured?'green':'plain'}>{configuration.configured?'Key saved':'Evidence engine active'}</Tag></div><p className="muted">The evidence engine handles rankings, calculations and keyword-based answers without a key. Use on-device semantic search without an API key, or connect OpenAI for generated interpretations. OpenAI API billing is separate from ChatGPT Plus.</p><label className="form-label">OpenAI API key<input type="password" autoComplete="off" value={key} onChange={e=>setKey(e.target.value)} placeholder={configuration.configured?'A key is saved. Enter a new one to replace it.':'sk-…'}/></label><label className="form-label">Answer model<input value={model} onChange={e=>setModel(e.target.value)} placeholder="gpt-4.1-mini"/></label><p className="footnote">Keys are encrypted before storage and never returned to the browser. Embeddings use text-embedding-3-small at 256 dimensions. Model availability depends on your account.</p><div className="button-row"><button className="btn primary" disabled={saving} onClick={()=>save()}>{saving?<Loader2 className="spin" size={16}/>:<Check size={16}/>}Save connection</button>{configuration.configured&&<button className="btn secondary" disabled={saving} onClick={()=>save(true)}>Remove key</button>}</div><div className="usage-box"><h3>Today’s OpenAI usage</h3><div><span>Provider attempts (including failures)</span><strong>{usage?.requests||0} / 100</strong></div><div><span>Input / embedding tokens</span><strong>{(usage?.input_tokens||0).toLocaleString()}</strong></div><div><span>Output tokens</span><strong>{(usage?.output_tokens||0).toLocaleString()}</strong></div><p className="footnote">Requests are limited per user per UTC day. Provider charges depend on your chosen models; token counts are not a billing reconciliation.</p></div></section><section className="panel"><ShieldCheck size={26} className="blue-icon"/><h2 className="mt-4">Your data, your workspace.</h2><div className="policy-item"><h3>Private by default</h3><p>Datasets and saved answers belong to your signed-in identity. Every server operation checks ownership.</p></div><div className="policy-item"><h3>Explicit external processing</h3><p>OpenAI indexing sends review text to OpenAI; OpenAI RAG sends your question and selected reviews. On-device mode downloads public model files but computes embeddings locally. Avoid uploading sensitive personal information unless you have permission to process it.</p></div><div className="policy-item"><h3>Retention & deletion</h3><p>Data stays until you delete its dataset. Deletion removes its reviews, embeddings, answer history and feedback. Original upload files are not retained separately.</p></div><div className="policy-item"><h3>Know the limits</h3><p>English-language theme rules can miss sarcasm, unfamiliar topics, and nuanced sentiment. Ratings and feature sentiment are different measures. AI interpretations still require source verification.</p></div><div className="policy-item"><h3>Bounded workspace</h3><p>20 datasets per user, 2,000 reviews per dataset, 6,000 characters per review, and a 2 MB upload limit.</p></div></section></div>;
+function Empty({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="empty">
+      <Search size={25} />
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+function ImportDialog({
+  open,
+  onOpenChange,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onImported: (id: string) => void;
+}) {
+  const [parsed, setParsed] = useState<ParsedFile | null>(null),
+    [mapping, setMapping] = useState<Mapping | null>(null),
+    [filename, setFilename] = useState(""),
+    [content, setContent] = useState(""),
+    [name, setName] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [result, setResult] = useState<any>(null);
+  const uploadId = useRef("");
+  const preview = useMemo(() => {
+    if (!parsed || !mapping) return null;
+    try {
+      return normalizeImport(parsed, mapping);
+    } catch {
+      return null;
+    }
+  }, [parsed, mapping]);
+  useEffect(() => {
+    if (open) {
+      setParsed(null);
+      setMapping(null);
+      setFilename("");
+      setContent("");
+      setName("");
+      setResult(null);
+      setError("");
+      uploadId.current = crypto.randomUUID();
+    }
+  }, [open]);
+  async function read(file: File) {
+    setError("");
+    if (file.size > LIMITS.bytes) {
+      setError("Choose a CSV or JSON file smaller than 2 MB.");
+      return;
+    }
+    try {
+      const text = await file.text(),
+        p = parseFile(text, file.name);
+      setContent(text);
+      setFilename(file.name);
+      setParsed(p);
+      setMapping(guessMapping(p.headers));
+      setName(file.name.replace(/\.[^.]+$/, ""));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api({
+        action: "import",
+        uploadId: uploadId.current,
+        name,
+        content,
+        filename,
+        mapping,
+      });
+      setResult(r);
+      if (!r.issues?.length) {
+        toast.success(`${r.accepted} reviews imported.`);
+        onImported(r.id);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!busy) onOpenChange(v);
+      }}
+    >
+      <DialogContent className="import-dialog">
+        <DialogHeader>
+          <DialogTitle>Import your reviews</DialogTitle>
+          <DialogDescription>
+            CSV or JSON · Up to 2 MB and 2,000 reviews · English-language
+            analysis
+          </DialogDescription>
+        </DialogHeader>
+        {error && (
+          <div className="notice error" role="alert">
+            {error}
+          </div>
+        )}
+        {result ? (
+          <>
+            <div className="notice">
+              <CheckCircle2 size={18} />
+              {result.accepted} accepted · {result.duplicates} duplicates
+              skipped · {result.issues.length} errors shown
+            </div>
+            <div className="import-issues">
+              {result.issues.map((x: any, i: number) => (
+                <p key={i}>
+                  Row {x.row}: {x.message}
+                </p>
+              ))}
+            </div>
+            <button
+              className="btn primary"
+              onClick={() => onImported(result.id)}
+            >
+              Open dataset
+              <ArrowRight size={16} />
+            </button>
+          </>
+        ) : !parsed ? (
+          <>
+            <label
+              className="upload-zone"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) read(file);
+              }}
+            >
+              <FileUp size={32} />
+              <strong>Choose a file or drop it here</strong>
+              <span>
+                Review text is required. Ratings and metadata are optional.
+              </span>
+              <input
+                type="file"
+                accept=".csv,.json"
+                onClick={(e) => { e.currentTarget.value = ""; }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) read(e.target.files[0]);
+                }}
+              />
+            </label>
+            <button
+              className="text-btn"
+              onClick={() =>
+                download("reviewlens-sample.csv", demoCsv(), "text/csv")
+              }
+            >
+              <ArrowDownToLine size={15} />
+              Download a sample CSV
+            </button>
+            <p className="footnote">
+              Uploaded text is saved privately. On-device indexing runs in your
+              browser. Text is sent to OpenAI only when you explicitly choose
+              OpenAI indexing or OpenAI RAG.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="file-chosen">
+              <CheckCircle2 size={18} />
+              <strong>{filename}</strong>
+              <button className="text-btn" onClick={() => setParsed(null)}>
+                Change file
+              </button>
+            </div>
+            <label className="form-label">
+              Dataset name
+              <input
+                value={name}
+                maxLength={100}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <div className="mapping-grid">
+              {Object.keys(mapping!).map((k) => (
+                <Picker
+                  key={k}
+                  label={
+                    k === "text"
+                      ? "Review text *"
+                      : k[0].toUpperCase() + k.slice(1)
+                  }
+                  value={mapping![k as keyof Mapping]}
+                  options={parsed.headers}
+                  empty="Not mapped"
+                  onChange={(v) => setMapping((m) => ({ ...m!, [k]: v }))}
+                />
+              ))}
+            </div>
+            <div className="preview-box">
+              <p className="eyebrow">PREVIEW</p>
+              {preview?.reviews.slice(0, 2).map((r, i) => (
+                <div key={i}>
+                  <Stars rating={r.rating} />
+                  <p>{r.text.slice(0, 200)}</p>
+                </div>
+              ))}
+              <p className="small">
+                {preview?.reviews.length || 0} valid reviews ·{" "}
+                {preview?.duplicates || 0} duplicates ·{" "}
+                {preview?.issues.length || parsed.issues.length} rejected rows
+              </p>
+            </div>
+            {preview?.issues.length ? (
+              <details className="import-issues">
+                <summary>Review validation issues</summary>
+                {preview.issues.slice(0, 20).map((x, i) => (
+                  <p key={i}>
+                    Row {x.row}: {x.message}
+                  </p>
+                ))}
+              </details>
+            ) : null}
+            <button
+              className="btn primary"
+              onClick={save}
+              disabled={busy || !preview?.reviews.length || !name.trim()}
+            >
+              {busy ? (
+                <Loader2 size={16} className="spin" />
+              ) : (
+                <Check size={16} />
+              )}{" "}
+              {busy
+                ? "Saving and analysing…"
+                : "Import " + (preview?.reviews.length || 0) + " reviews"}
+            </button>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+function SettingsPanel({
+  configuration,
+  usage,
+  onSaved,
+}: {
+  configuration: { configured: boolean; keyInvalid?: boolean; model: string };
+  usage: any;
+  onSaved: () => void;
+}) {
+  const [key, setKey] = useState(""),
+    [model, setModel] = useState(configuration.model),
+    [saving, setSaving] = useState(false);
+  useEffect(() => setModel(configuration.model), [configuration.model]);
+  async function save(removeKey = false) {
+    setSaving(true);
+    try {
+      await api({ action: "settings", key, model, removeKey });
+      setKey("");
+      onSaved();
+      toast.success(removeKey ? "API key removed." : "AI settings saved.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="settings-grid">
+      <section className="panel">
+        <div className="panel-title">
+          <div>
+            <p className="eyebrow">OPTIONAL AI CONNECTION</p>
+            <h2>Models & access</h2>
+          </div>
+          <Tag tone={configuration.keyInvalid ? "red" : configuration.configured ? "green" : "plain"}>
+            {configuration.keyInvalid
+              ? "Key needs replacement"
+              : configuration.configured
+                ? "Key saved"
+                : "Evidence engine active"}
+          </Tag>
+        </div>
+        <p className="muted">
+          The evidence engine handles rankings, calculations and keyword-based
+          answers without a key. Use on-device semantic search without an API
+          key, or connect OpenAI for generated interpretations. OpenAI API
+          billing is separate from ChatGPT Plus.
+        </p>
+        {configuration.keyInvalid && (
+          <div className="notice error" role="alert">
+            The saved key can no longer be decrypted. Enter and save the key
+            again, or remove it to keep using the no-cost modes.
+          </div>
+        )}
+        <label className="form-label">
+          OpenAI API key
+          <input
+            type="password"
+            autoComplete="off"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder={
+              configuration.configured
+                ? "A key is saved. Enter a new one to replace it."
+                : "sk-…"
+            }
+          />
+        </label>
+        <label className="form-label">
+          Answer model
+          <input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="gpt-4.1-mini"
+          />
+        </label>
+        <p className="footnote">
+          Keys are encrypted before storage and never returned to the browser.
+          Embeddings use text-embedding-3-small at 256 dimensions. Model
+          availability depends on your account.
+        </p>
+        <div className="button-row">
+          <button
+            className="btn primary"
+            disabled={saving}
+            onClick={() => save()}
+          >
+            {saving ? (
+              <Loader2 className="spin" size={16} />
+            ) : (
+              <Check size={16} />
+            )}
+            Save connection
+          </button>
+          {configuration.configured && (
+            <button
+              className="btn secondary"
+              disabled={saving}
+              onClick={() => save(true)}
+            >
+              Remove key
+            </button>
+          )}
+        </div>
+        <div className="usage-box">
+          <h3>Today’s OpenAI usage</h3>
+          <div>
+            <span>Provider attempts (including failures)</span>
+            <strong>{usage?.requests || 0} / 100</strong>
+          </div>
+          <div>
+            <span>Input / embedding tokens</span>
+            <strong>{(usage?.input_tokens || 0).toLocaleString()}</strong>
+          </div>
+          <div>
+            <span>Output tokens</span>
+            <strong>{(usage?.output_tokens || 0).toLocaleString()}</strong>
+          </div>
+          <p className="footnote">
+            Requests are limited per user per UTC day. Provider charges depend
+            on your chosen models; token counts are not a billing
+            reconciliation.
+          </p>
+        </div>
+      </section>
+      <section className="panel">
+        <ShieldCheck size={26} className="blue-icon" />
+        <h2 className="mt-4">Your data, your workspace.</h2>
+        <div className="policy-item">
+          <h3>Private by default</h3>
+          <p>
+            Datasets and saved answers belong to your signed-in identity. Every
+            server operation checks ownership.
+          </p>
+        </div>
+        <div className="policy-item">
+          <h3>Explicit external processing</h3>
+          <p>
+            OpenAI indexing sends review text to OpenAI; OpenAI RAG sends your
+            question and selected reviews. On-device mode downloads public model
+            files but computes embeddings locally. Avoid uploading sensitive
+            personal information unless you have permission to process it.
+          </p>
+        </div>
+        <div className="policy-item">
+          <h3>Retention & deletion</h3>
+          <p>
+            Data stays until you delete its dataset. Deletion removes its
+            reviews, embeddings, answer history and feedback. Original upload
+            files are not retained separately.
+          </p>
+        </div>
+        <div className="policy-item">
+          <h3>Know the limits</h3>
+          <p>
+            English-language theme rules can miss sarcasm, unfamiliar topics,
+            and nuanced sentiment. Ratings and feature sentiment are different
+            measures. AI interpretations still require source verification.
+          </p>
+        </div>
+        <div className="policy-item">
+          <h3>Bounded workspace</h3>
+          <p>
+            20 datasets per user, 2,000 reviews per dataset, 6,000 characters
+            per review, and a 2 MB upload limit.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
 }
