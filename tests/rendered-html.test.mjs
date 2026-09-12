@@ -11,6 +11,10 @@ test('production worker renders the ReviewLens shell and serves private API',asy
   compatibilityDate:'2026-05-01',
   compatibilityFlags:['nodejs_compat'],
   d1Databases:{DB:'production-smoke'},
+  // A correctly configured deployment declares its gateway, so the API reaches its
+  // authentication check instead of refusing. The undeclared-gateway refusal is covered
+  // in reviewlens-api.test.mjs.
+  bindings:{IDENTITY_GATEWAY:'production-smoke-gateway'},
   serviceBindings:{ASSETS:async request=>{
    try{const p=new URL(request.url).pathname;return new Response(await readFile(path.join('dist/client',p)));}
    catch{return new Response('Not found',{status:404});}

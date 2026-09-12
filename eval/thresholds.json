@@ -1,0 +1,31 @@
+{
+  "note": "Two gate sets. 'regression' is enforced on every CI run and is pinned to the measured lexical baseline: its job is to catch a retrieval regression, not to certify quality. 'semantic_release' is enforced only when a run supplies captured on-device hits (--hits): it is the bar the on-device semantic feature must clear before it can ship as a default mode. Raising a bound to make a failing build pass is a process violation and requires a dated entry in docs/delivery/decision-log.md.",
+  "baseline_recorded_on": "2026-09-12",
+  "baseline_measured": {
+    "retriever": "lexical-baseline",
+    "split": "dev",
+    "recall_at_5": 0.2,
+    "precision_at_5": 0.18,
+    "mrr": 0.4,
+    "absent_topic_false_positive_rate": 0.0,
+    "comment": "Lexical retrieval finds 1 in 5 labelled-relevant reviews on paraphrased questions. This is the measured problem the on-device semantic mode exists to solve, and it is the number any replacement must beat."
+  },
+  "gates": {
+    "regression": {
+      "applies_when": "always",
+      "recall_at_5": { "min": 0.19 },
+      "precision_at_5": { "min": 0.17 },
+      "absent_topic_false_positive_rate": { "max": 0.3 },
+      "p95_latency_ms": { "max": 250 },
+      "rationale": "Pinned at the measured lexical baseline with a small tolerance for floating-point summation. Passing this gate means retrieval has not got worse. It does NOT mean retrieval is good."
+    },
+    "semantic_release": {
+      "applies_when": "a run supplies captured on-device hits via --hits",
+      "recall_at_5": { "min": 0.7 },
+      "precision_at_5": { "min": 0.5 },
+      "absent_topic_false_positive_rate": { "max": 0.25 },
+      "p95_latency_ms": { "max": 1500 },
+      "rationale": "Agreed before the feature was measured, so the bar could not be set to whatever the model happened to produce. Recall 0.70 is a 3.5x improvement on the lexical baseline and is the point at which a product manager can trust the tool to surface most relevant evidence. The absent-topic bound is deliberately tight: a semantic retriever that invents relevance on topics the corpus does not contain is worse than no feature at all. Latency allows for on-device inference but excludes first-run model download."
+    }
+  }
+}

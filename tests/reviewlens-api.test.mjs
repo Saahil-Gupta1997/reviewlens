@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { Miniflare } from 'miniflare';
 const handlers=new Map();
 const provider={intercept:({path})=>({reply:(status,handler)=>{handlers.set(path,{status,handler});return {persist(){}};}})};
-const mf=new Miniflare({modules:true,outboundService:async request=>{assert.equal(new URL(request.url).origin,'https://api.openai.com');assert.equal(request.method,'POST');const mock=handlers.get(new URL(request.url).pathname);assert.ok(mock,'Unexpected external request');return Response.json(mock.handler({body:await request.text()}),{status:mock.status});},scriptPath:'work/api-worker.mjs',compatibilityDate:'2026-05-01',d1Databases:{DB:'reviewlens-test'},bindings:{KEY_ENCRYPTION_SECRET:'test-only-encryption-secret-not-for-production'},log:undefined});
+const mf=new Miniflare({modules:true,outboundService:async request=>{assert.equal(new URL(request.url).origin,'https://api.openai.com');assert.equal(request.method,'POST');const mock=handlers.get(new URL(request.url).pathname);assert.ok(mock,'Unexpected external request');return Response.json(mock.handler({body:await request.text()}),{status:mock.status});},scriptPath:'work/api-worker.mjs',compatibilityDate:'2026-05-01',d1Databases:{DB:'reviewlens-test'},bindings:{KEY_ENCRYPTION_SECRET:'test-only-encryption-secret-not-for-production',IDENTITY_GATEWAY:'test-harness'},log:undefined});
 const db=await mf.getD1Database('DB');
 for(const sql of (await readFile('drizzle/0000_eager_lucky_pierre.sql','utf8')).split('--> statement-breakpoint'))if(sql.trim())await db.prepare(sql.trim()).run();
 after(()=>mf.dispose());
@@ -63,3 +63,26 @@ test('rating conditions remain deterministic through every answer mode',async()=
  assert.equal((await request()).body.usage.requests,100);
 });
 test('deletion cascades to reviews and answers',async()=>{assert.equal((await request({action:'delete',datasetId:id})).status,200);assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM reviews WHERE dataset_id=?').bind(id).first()).n,0);assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM answers WHERE dataset_id=?').bind(id).first()).n,0);assert.equal((await request(undefined,'alice','?dataset='+id)).status,404);});
+
+// A documented risk is not a control. This proves the deployment guard in ownerOf()
+// actually refuses to serve when no trusted identity gateway is declared, rather than
+// trusting a client-supplied oai-authenticated-user-id header. See RISK-07 / ISS-01.
+test('API refuses to attribute ownership when no identity gateway is declared', async () => {
+  const ungated = new Miniflare({
+    modules: true,
+    scriptPath: 'work/api-worker.mjs',
+    compatibilityDate: '2026-05-01',
+    d1Databases: { DB: 'reviewlens-ungated' },
+    bindings: { KEY_ENCRYPTION_SECRET: 'test-only-encryption-secret-not-for-production' },
+    log: undefined,
+  });
+  try {
+    const r = await ungated.dispatchFetch('http://reviewlens.test/api/workspace', {
+      headers: { 'oai-authenticated-user-id': 'attacker-supplied' },
+    });
+    assert.equal(r.status, 503, 'an ungated deployment must refuse, not trust the header');
+    assert.match((await r.json()).error, /trusted identity gateway/);
+  } finally {
+    await ungated.dispose();
+  }
+});
