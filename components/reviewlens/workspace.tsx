@@ -986,7 +986,8 @@ export default function Workspace() {
                             options={["basic", "device", "openai"]}
                             labels={{
                               basic: "Basic analysis",
-                              device: "On-device semantic search · no API fee",
+                              device:
+                                "On-device semantic search · failed evaluation, kept for reference",
                               openai: "OpenAI RAG · paid API",
                             }}
                             allowEmpty={false}

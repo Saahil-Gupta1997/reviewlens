@@ -1,6 +1,6 @@
 # Retrieval evaluation report
 
-- Generated: 2026-09-12T11:46:47.190Z
+- Generated: 2026-09-12T14:09:16.423Z
 - Golden set: `golden-v1` / corpus 24 reviews / k=5
 - Split: **dev**
 - Gate result: **PASS**
@@ -10,7 +10,7 @@
 
 | Retriever | recall@5 | precision@5 | MRR | absent-topic FP rate | p50 ms | p95 ms |
 | --- | --- | --- | --- | --- | --- | --- |
-| lexical-baseline | 0.200 | 0.180 | 0.400 | 0.00 | 1.1 | 15.2 |
+| lexical-baseline | 0.200 | 0.180 | 0.400 | 0.00 | 0.8 | 12.9 |
 
 ## Gate set `regression` applied to `lexical-baseline`
 
@@ -21,7 +21,7 @@
 | recall_at_5 | >= 0.19 | 0.200 | PASS |
 | precision_at_5 | >= 0.17 | 0.180 | PASS |
 | absent_topic_false_positive_rate | <= 0.3 | 0.000 | PASS |
-| p95_latency_ms | <= 250 | 15.180 | PASS |
+| p95_latency_ms | <= 250 | 12.861 | PASS |
 
 ## Per-case detail - lexical-baseline
 

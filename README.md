@@ -71,7 +71,7 @@ are measured from the targets that are merely proposed.
 | Mode                      | Mechanism                                                            | Output                                         | API cost                | Status                                 |
 | ------------------------- | -------------------------------------------------------------------- | ---------------------------------------------- | ----------------------- | -------------------------------------- |
 | Basic analysis            | English feature rules, deterministic calculations, lexical retrieval | Statistics and source evidence                 | None                    | Shipped                                |
-| On-device semantic search | MiniLM embeddings and cosine similarity in a browser worker          | Candidate source passages; no generated prose  | No per-request charge   | **Off by default, "limited evidence"** |
+| ~~On-device semantic search~~ | MiniLM embeddings and cosine similarity in a browser worker | Candidate source passages; no generated prose | No per-request charge | **FAILED evaluation.** Off by default, kept as a [measured negative result](docs/delivery/evaluation-dtype-experiment.md) |
 | OpenAI RAG                | Server-side embeddings, retrieval and generation                     | Model interpretations with verified quotations | User-funded API account | Opt-in, capped at 100 req/day          |
 
 Numerical questions and complaint rankings use deterministic analytics in **every** mode.

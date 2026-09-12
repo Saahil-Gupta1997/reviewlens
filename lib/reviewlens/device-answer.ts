@@ -21,7 +21,8 @@ export function deviceAnswer(base: Answer, reviews: Review[], candidates: unknow
       'No passages met the on-device similarity threshold. Try different wording or Basic analysis; this is not proof that no evidence exists.',
     findings: valid.map(h => ({ text: '“' + h.quote + '”', reviewIds: [h.reviewId] })),
     citations: scoped.filter(r => seen.has(r.id)),
-    notes: ['Embeddings and similarity ranking ran on this device. No generative model wrote this answer.',
+    notes: ['This mode FAILED its evaluation and is kept as a measured negative result, not as a working feature. On a labelled golden set it found 0.267 of relevant reviews against a 0.70 bar, and returned evidence for 50% of questions about topics the data does not contain. Prefer Basic analysis.',
+      'Embeddings and similarity ranking ran on this device. No generative model wrote this answer.',
       'Source text and scope were checked on the server. Similarity is not a confidence score; relevance is not independently verified.',
       'This is a retrieved sample, not a measure of prevalence. Counts and rankings use the separate evidence engine.'] };
 }
