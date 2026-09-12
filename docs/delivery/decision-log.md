@@ -184,3 +184,41 @@ Recorded here so a change to any of them is a visible decision rather than a sil
 
 OpenAI's 256-dimension vectors and the device's 384-dimension vectors are kept in separate
 indexes and never mixed.
+
+---
+
+## DEC-09 — Keep the failed on-device mode as a documented negative result
+
+**Date:** 2026-09-12 · **Status:** Active · **Reversibility:** Two-way
+
+The on-device semantic mode [failed its release gate](evaluation-semantic-result.md) and
+[fp32 did not rescue it](evaluation-dtype-experiment.md). The pre-agreed rule said cut. The
+code is **not** being deleted. It stays, off by default, relabelled in the UI as
+*"failed evaluation, kept for reference"*, with the measured numbers in every answer it
+produces.
+
+**Why not delete it.** Two distinct questions were being conflated. *Should this ship as a
+product feature?* — no, and that is settled: it is off by default, relabelled, and recommended
+against in its own output. *Should the code and its evidence be destroyed?* — no. The harness,
+the captured vectors, the threshold sweep and the two postmortems are the most informative
+artefacts in this repository, and they only make sense alongside the code they describe.
+
+**What this is not.** It is not a reprieve, and not "keep it in case it gets better". The
+feature is closed as a product decision. Reopening it requires a new bar agreed before a new
+measurement — see DEC-04 and the hybrid note below.
+
+**Trade-off, stated plainly.** A reader can still select a mode known to perform badly. That is
+mitigated by the label, the default, and the first line of every answer it returns — but not
+eliminated. The alternative was deleting the evidence, which is worse for this repository's
+actual purpose.
+
+**What would change my mind.** A real user selecting it and being misled despite the labelling.
+At that point the honest move is deletion, because a warning a user can click past is a
+disclosure, not a control — the same standard applied to the identity-gateway header in
+[DEC-06](#dec-06--refuse-to-serve-when-no-trusted-identity-gateway-is-declared).
+
+**Hybrid retrieval is a different feature.** Lexical scores 0.00 absent-topic false positives
+where semantic scores 0.50; semantic scores 1.00 recall on D2 where lexical scores 0.33. The
+failure modes are complementary and that remains the most interesting untested signal in the
+data. If it is built, it gets its own threshold set agreed before measurement and its own entry
+here. It is not a reason to set aside this result.
