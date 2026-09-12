@@ -42,7 +42,7 @@ whatever the model happened to produce.
 | Evidence                                              | Status                                                         | Limitation                                                                 |
 | ----------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `npx tsc --noEmit`                                    | Pass                                                           | Types, not behaviour                                                       |
-| `npm test` — 36 tests                                 | Pass                                                           | Simulated provider; synthetic vectors for the device path                  |
+| `npm test` — 52 tests + production smoke                                 | Pass                                                           | Simulated provider; synthetic vectors for the device path                  |
 | `npm run eval` — retrieval regression gate, dev split | Pass · recall@5 0.200, precision@5 0.180, absent-topic FP 0.00 | 24-review fixture, one annotator. A regression gate, not an accuracy claim |
 | Production build and one rendered-HTML smoke test     | Pass                                                           | Compilation is not browser inference                                       |
 | Owner walkthrough with supplied fixtures              | Reported correct                                               | Self-reported; not an independent audit                                    |

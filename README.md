@@ -17,7 +17,7 @@ about whether the feature works.**
 | If you are here to judge                   | Read                                                                                                                                   |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | How this was delivered, gated and measured | **[Delivery artifacts](docs/delivery/README.md)** — start with the [launch readiness review](docs/delivery/launch-readiness-review.md) |
-| Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, format, 36 tests, build, retrieval gate                                               |
+| Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, lint, 52 tests, build, retrieval gate                                               |
 | What the product does                      | [Three-minute walkthrough](#three-minute-walkthrough)                                                                                  |
 
 ## The three things worth your time
@@ -111,7 +111,7 @@ required. This loopback adapter must never be exposed as a production server.
 npm run verify
 ```
 
-Runs the typecheck, the formatting check, 36 tests, the production build, and the retrieval
+Runs the typecheck, lint, 52 tests, the production build, and the retrieval
 quality gate. Every gate is listed in [release gates](docs/delivery/release-gates.md).
 
 ## Architecture
