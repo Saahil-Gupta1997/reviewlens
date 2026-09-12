@@ -14,17 +14,17 @@ figure, because none has been measured.
 | Metric                                    | Value      | Command            | Caveat                                             |
 | ----------------------------------------- | ---------- | ------------------ | -------------------------------------------------- |
 | Retrieval recall@5, lexical, dev split    | **0.200**  | `npm run eval`     | 24-review fixture, one annotator                   |
-| Retrieval recall@5, **on-device semantic** | **0.267** | `npm run eval -- --hits` | Chrome 152. Bar was 0.70 — **FAILED** |
-| Retrieval precision@5, on-device semantic | 0.320 | `npm run eval -- --hits` | Bar was 0.50 — **FAILED** |
-| Absent-topic FP rate, on-device semantic | **0.50** | `npm run eval -- --hits` | Bar was 0.25 — **FAILED**. Lexical scores 0.00 here |
-| Thresholds clearing the semantic gate | **0 of 66** | `node scripts/threshold-sweep.mjs` | No similarity floor separates signal from noise |
+| Retrieval recall@5, **on-device semantic** | **0.267** | `npm run eval -- --hits eval/captured-hits.json --timings eval/captured-hits.meta.json` | Chrome 152. Bar was 0.70 — **FAILED** |
+| Retrieval precision@5, on-device semantic | 0.320 | `npm run eval -- --hits eval/captured-hits.json --timings eval/captured-hits.meta.json` | Bar was 0.50 — **FAILED** |
+| Absent-topic FP rate, on-device semantic | **0.50 (1/2 questions)** | `npm run eval -- --hits eval/captured-hits.json --timings eval/captured-hits.meta.json` | Bar was 0.25 — **FAILED**. Lexical scores 0.00 here |
+| Thresholds clearing the semantic gate | **0 of 66 tested floors** | `node scripts/threshold-sweep.mjs` | None of the tested floors clears the quality bounds on this dev set |
 | On-device index build, 24 reviews | **11,242 ms** | `scripts/device-harness/` | q8 WASM single-thread, first run incl. model download |
 | On-device query latency | **22–38 ms** | `scripts/device-harness/` | After the index is warm |
 | Retrieval precision@5, lexical, dev split | 0.180      | `npm run eval`     | as above                                           |
 | MRR, lexical, dev split                   | 0.400      | `npm run eval`     | as above                                           |
 | Absent-topic false-positive rate, lexical | 0.000      | `npm run eval`     | 2 dev cases only                                   |
 | p95 retrieval latency                     | ~13 ms     | `npm run eval`     | In-process, excludes network and model load        |
-| Automated test count                      | 52 + smoke | `npm test`         | Simulated provider; synthetic device vectors       |
+| Automated test count                      | See verification output | `npm test`         | Simulated provider; synthetic device vectors       |
 | Acceptance cases in-app                   | 24         | Quality tab        | Synthetic; routing, calculations, scope, ingestion |
 | Type errors                               | 0          | `npx tsc --noEmit` |                                                    |
 
@@ -45,7 +45,7 @@ invented retrospectively to fit whatever the product happened to do.
 
 | Metric                           | Definition                                                                                           | Target                         | Instrumentation                                                                         |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------- |
-| Retrieval recall@5               | As measured above, on a held-out labelled set                                                        | ≥ 0.70 for semantic default-on | **Harness exists**, semantic input pending (ISS-03)                                     |
+| Retrieval recall@5               | As measured above, on a held-out labelled set                                                        | ≥ 0.70 for semantic default-on | Development captures complete; held-out candidate evaluation deferred                                     |
 | Retrieval precision@5            | As above                                                                                             | ≥ 0.50                         | Same                                                                                    |
 | Absent-topic false-positive rate | Share of zero-evidence questions returning any result                                                | ≤ 0.25                         | Same                                                                                    |
 | Unsupported-claim rate           | Share of generated findings whose claim is not supported by its verified quote, on a labelled rubric | ≤ 0.05                         | **None.** Quote _existence_ is enforced in code; claim _support_ is unmeasured (ISS-04) |
@@ -55,9 +55,9 @@ invented retrospectively to fit whatever the product happened to do.
 
 | Metric                         | Definition                                                                        | Target              | Instrumentation                                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Download-to-first-answer       | First-run model download + index build, to first on-device answer                 | —                   | **None.** Needs client timing (ISS-03)                                                                          |
+| Download-to-first-answer       | First-run model download + index build, to first on-device answer                 | —                   | Partial: harness records indexing including first load; no full app first-answer measurement                                                                          |
 | Index abandonment rate         | Share of started indexing runs never completed                                    | —                   | **None**                                                                                                        |
-| Steady-state query latency p95 | Retrieval after the index is warm                                                 | ≤ 1500 ms on device | **Harness ready**, real input pending                                                                           |
+| Steady-state query latency p95 | Retrieval after the index is warm                                                 | ≤ 1500 ms on device | q8: seven paired browser observations, sample p95 38 ms; fp32: NOT_MEASURED                                                                           |
 | Cost per investigation         | Provider spend per completed investigation, separating embeddings from generation | —                   | **Partial.** `usage` table records requests and token counts per user per day; no per-investigation attribution |
 
 ## Why so much of this says "None"
@@ -73,8 +73,9 @@ job that is hard to retrofit, and it is the part shown here.
 
 ## Baseline discipline
 
-The one metric with a real number — recall@5 = 0.20 — became useful only because a baseline
-was measured before a threshold was set. Any target agreed without a baseline is a guess, and
+The lexical baseline and subsequent semantic measurements support a bounded scope decision. Any target agreed without a baseline is a guess, and
 a guess that later gets quietly adjusted to match the result is worse than no target. That is
 why `eval/thresholds.json` records the measured baseline next to the gates, and why changing a
 gate requires a dated entry in the [decision log](decision-log.md).
+
+Timing correction: the original sub-millisecond semantic report measured saved-hit lookup and is invalid. Use the paired capture commands in [evaluation](evaluation.md); q8 sample p95 is 38 ms across seven queries, and fp32 latency is NOT_MEASURED. The precision metric divides by returned results (up to five), not a fixed denominator of five.

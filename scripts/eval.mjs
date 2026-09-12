@@ -16,7 +16,7 @@
  */
 import { build } from 'esbuild';
 import { mkdir, writeFile, readFile, appendFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { capturedTiming, latencySummary, latencyGate } from './eval-timing.mjs';
 import { argv, exit } from 'node:process';
 
 const K = 5;
@@ -29,6 +29,11 @@ const value = (name) => {
 
 const useHoldout = flag('holdout');
 const hitsFile = value('hits');
+const timingFile = value('timings');
+const reportDir = value('output-dir') || 'eval/reports';
+if ((flag('hits') && !hitsFile) || (flag('timings') && (!timingFile || !hitsFile))) {
+  throw Error('--hits requires a file; --timings requires both a file and --hits.');
+}
 
 if (useHoldout && !flag('confirm')) {
   console.error(
@@ -41,7 +46,7 @@ if (useHoldout && !flag('confirm')) {
 }
 
 await mkdir('work', { recursive: true });
-await mkdir('eval/reports', { recursive: true });
+await mkdir(reportDir, { recursive: true });
 await build({
   entryPoints: ['lib/reviewlens/intelligence.ts'],
   bundle: true,
@@ -70,11 +75,12 @@ const reviews = raw.map((r) => ({
   aspects: classifyAspects(r.review_text),
 }));
 
-const capturedHits =
-  hitsFile && existsSync(hitsFile) ? JSON.parse(await readFile(hitsFile, 'utf8')) : null;
+const hitBytes = hitsFile ? await readFile(hitsFile) : null;
+const capturedHits = hitBytes ? JSON.parse(hitBytes.toString('utf8')) : null;
 
 const split = useHoldout ? 'holdout' : 'dev';
 const cases = golden.cases.filter((c) => c.split === split);
+const timing = capturedTiming(timingFile ? JSON.parse(await readFile(timingFile, 'utf8')) : null, hitBytes, cases.map(c => c.id));
 
 function score(retrieved, relevant) {
   const top = retrieved.slice(0, K);
@@ -91,7 +97,7 @@ function score(retrieved, relevant) {
   };
 }
 
-function runRetriever(name, retrieve) {
+function runRetriever(name, retrieve, captured = false) {
   const rows = [];
   for (const c of cases) {
     const started = performance.now();
@@ -102,15 +108,16 @@ function runRetriever(name, retrieve) {
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-    const latencyMs = performance.now() - started;
+    const latencyMs = captured ? (timing.values?.[c.id] ?? null) : performance.now() - started;
     rows.push({ ...c, ...score(retrieved, c.relevant_ids), latencyMs, error });
   }
   const scored = rows.filter((r) => r.relevant_ids.length > 0);
   const absent = rows.filter((r) => r.relevant_ids.length === 0);
   const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-  const latencies = rows.map((r) => r.latencyMs).sort((a, b) => a - b);
+  const latencies = latencySummary(rows.map((r) => r.latencyMs));
   return {
     retriever: name,
+    latency_source: captured ? timing.source : 'Measured in-process lexical search; excludes network and UI.',
     cases: rows,
     summary: {
       scored_cases: scored.length,
@@ -121,9 +128,7 @@ function runRetriever(name, retrieve) {
       absent_topic_false_positive_rate: absent.length
         ? absent.filter((r) => r.falsePositive).length / absent.length
         : null,
-      p50_latency_ms: latencies[Math.floor(latencies.length * 0.5)] ?? null,
-      p95_latency_ms:
-        latencies[Math.min(latencies.length - 1, Math.floor(latencies.length * 0.95))] ?? null,
+      ...latencies,
     },
   };
 }
@@ -138,7 +143,7 @@ if (capturedHits) {
       const entry = capturedHits[c.id];
       if (!entry) throw Error('No captured hits for case ' + c.id);
       return entry.map((h) => (typeof h === 'string' ? h : h.reviewId));
-    }),
+    }, true),
   );
 }
 
@@ -173,15 +178,9 @@ const checks = [
       gates.absent_topic_false_positive_rate.max,
     direction: '<=',
   },
-  {
-    gate: 'p95_latency_ms',
-    actual: primary.summary.p95_latency_ms,
-    bound: gates.p95_latency_ms.max,
-    pass: primary.summary.p95_latency_ms <= gates.p95_latency_ms.max,
-    direction: '<=',
-  },
+  latencyGate(primary.summary.p95_latency_ms, gates.p95_latency_ms.max),
 ];
-const passed = checks.every((c) => c.pass);
+const passed = checks.every((c) => c.pass) && results.every(r => r.cases.every(c => !c.error));
 
 const n = (x, d = 3) => (x === null || x === undefined ? 'n/a' : Number(x).toFixed(d));
 const stamp = new Date().toISOString();
@@ -191,7 +190,7 @@ const report = {
   split,
   corpus_size: reviews.length,
   k: K,
-  retrievers: results.map((r) => ({ retriever: r.retriever, summary: r.summary })),
+  retrievers: results.map((r) => ({ retriever: r.retriever, latency_source: r.latency_source, summary: r.summary })),
   gated_retriever: primary.retriever,
   gate_set: gateSet,
   gate_checks: checks,
@@ -199,7 +198,7 @@ const report = {
   baseline_for_comparison: thresholds.baseline_measured,
   semantic_status: capturedHits
     ? 'measured from captured on-device hits'
-    : 'NOT RUN - no captured on-device hits supplied. Semantic retrieval quality is unmeasured.',
+    : 'Not evaluated in this run. See semantic-q8.md and semantic-fp32.md for the captured development results.',
   cases: results.map((r) => ({
     retriever: r.retriever,
     detail: r.cases.map((c) => ({
@@ -214,6 +213,7 @@ const report = {
       missed: c.missed,
       spurious: c.spurious,
       error: c.error,
+      latency_ms: c.latencyMs,
     })),
   })),
 };
@@ -250,6 +250,10 @@ const md = [
       ' |',
   ),
   '',
+  ...results.map(r => '- Timing (' + r.retriever + '): ' + r.latency_source),
+  '',
+  'Precision is measured over returned results (up to 5), averaged over relevant-topic cases; it is not fixed-denominator precision@5.',
+  '',
   '## Gate set `' + gateSet + '` applied to `' + primary.retriever + '`',
   '',
   '> ' + gates.rationale,
@@ -267,7 +271,7 @@ const md = [
       ' | ' +
       n(c.actual, 3) +
       ' | ' +
-      (c.pass ? 'PASS' : 'FAIL') +
+      (c.status || (c.pass ? 'PASS' : 'FAIL')) +
       ' |',
   ),
   '',
@@ -306,13 +310,13 @@ const md = [
   'product decision.',
   '',
   'Similarity is not confidence. These numbers describe retrieval over a 24-review fixture',
-  'labelled by one annotator. They are a regression gate, not evidence of production accuracy.',
+  'labelled by one annotator. Gate results apply to this sample, not production accuracy.',
   '',
 ].join('\n');
 
-const file = 'eval/reports/' + stamp.replace(/[:.]/g, '-') + '-' + split + '.json';
+const file = reportDir + '/' + stamp.replace(/[:.]/g, '-') + '-' + split + '.json';
 await writeFile(file, JSON.stringify(report, null, 2));
-await writeFile('eval/reports/latest.md', md);
+await writeFile(reportDir + '/latest.md', md);
 
 if (useHoldout) {
   await appendFile(
@@ -333,7 +337,7 @@ if (useHoldout) {
 }
 
 console.log(md);
-console.log('\nReport written to ' + file + ' and eval/reports/latest.md');
+console.log('\nReport written to ' + file + ' and ' + reportDir + '/latest.md');
 if (!passed) {
   console.error(
     '\nRelease gate FAILED. Do not ship. Either fix retrieval, or re-agree the threshold with a dated entry in docs/delivery/decision-log.md.',

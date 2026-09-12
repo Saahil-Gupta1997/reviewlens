@@ -8,24 +8,40 @@
     "precision_at_5": 0.18,
     "mrr": 0.4,
     "absent_topic_false_positive_rate": 0.0,
-    "comment": "Lexical retrieval finds 1 in 5 labelled-relevant reviews on paraphrased questions. This is the measured problem the on-device semantic mode exists to solve, and it is the number any replacement must beat."
+    "comment": "Mean recall across five relevant-topic development questions over 24 fictional reviews. Not a population accuracy estimate."
   },
   "gates": {
     "regression": {
       "applies_when": "always",
-      "recall_at_5": { "min": 0.19 },
-      "precision_at_5": { "min": 0.17 },
-      "absent_topic_false_positive_rate": { "max": 0.3 },
-      "p95_latency_ms": { "max": 250 },
+      "recall_at_5": {
+        "min": 0.19
+      },
+      "precision_at_5": {
+        "min": 0.17
+      },
+      "absent_topic_false_positive_rate": {
+        "max": 0.3
+      },
+      "p95_latency_ms": {
+        "max": 250
+      },
       "rationale": "Pinned at the measured lexical baseline with a small tolerance for floating-point summation. Passing this gate means retrieval has not got worse. It does NOT mean retrieval is good."
     },
     "semantic_release": {
       "applies_when": "a run supplies captured on-device hits via --hits",
-      "recall_at_5": { "min": 0.7 },
-      "precision_at_5": { "min": 0.5 },
-      "absent_topic_false_positive_rate": { "max": 0.25 },
-      "p95_latency_ms": { "max": 1500 },
-      "rationale": "Agreed before the feature was measured, so the bar could not be set to whatever the model happened to produce. Recall 0.70 is a 3.5x improvement on the lexical baseline and is the point at which a product manager can trust the tool to surface most relevant evidence. The absent-topic bound is deliberately tight: a semantic retriever that invents relevance on topics the corpus does not contain is worse than no feature at all. Latency allows for on-device inference but excludes first-run model download."
+      "recall_at_5": {
+        "min": 0.7
+      },
+      "precision_at_5": {
+        "min": 0.5
+      },
+      "absent_topic_false_positive_rate": {
+        "max": 0.25
+      },
+      "p95_latency_ms": {
+        "max": 1500
+      },
+      "rationale": "Portfolio acceptance targets recorded before captured semantic measurements, after implementation. They apply to this development sample, not production trust. Latency requires paired browser worker timings and excludes initial indexing/download; missing evidence cannot pass. Quality bounds are unchanged."
     }
   }
 }

@@ -45,9 +45,9 @@ _prevalence counts all relevant reviews regardless of retrieved example count_.
 
 ---
 
-## DEC-03 — On-device MiniLM rather than a hosted embedding service
+## DEC-03 — On-device MiniLM rather than a hosted embedding service (superseded by DEC-09)
 
-**Date:** 2026-08 · **Status:** Active · **Reversibility:** Two-way
+**Date:** 2026-08 · **Status:** Superseded by DEC-09 · **Reversibility:** Two-way
 
 Semantic retrieval runs as quantized MiniLM in a browser module worker, single-threaded
 WebAssembly, 384 dimensions, with vectors cached in IndexedDB.
@@ -81,7 +81,7 @@ every result "limited evidence" and by making absent-topic false-positive rate a
 so the consequence of a badly chosen floor is measured even while the floor is unprincipled.
 
 **What would change my mind.** Absent-topic false-positive rate above 0.25, or recall loss on
-paraphrase cases, in a run of `npm run eval -- --hits` against real model output. Either
+paraphrase cases, in a run of `npm run eval -- --hits eval/captured-hits.json --timings eval/captured-hits.meta.json` against real model output. Either
 result means the floor moves — and it moves on a dev-split measurement, never on holdout.
 
 ---
@@ -161,9 +161,7 @@ came after, which is why it ends in a no-go rather than a number. The lexical ba
 **recall@5 = 0.20** is the single strongest justification for the semantic feature, and it was
 available from a two-hour labelling exercise that could have happened in week one.
 
-**Enforced by.** `npm run eval` runs in CI on every push. The holdout split refuses to run
-without `--confirm` and appends every run to `eval/holdout-runs.log`, so "we did not tune on
-the evaluation set" is an auditable claim rather than an assurance.
+**Enforced by.** `npm run eval` runs in CI on every push. The holdout flag and log track this harness’s invocations, not all possible access to the public data.
 
 ---
 
@@ -187,38 +185,16 @@ indexes and never mixed.
 
 ---
 
-## DEC-09 — Keep the failed on-device mode as a documented negative result
+## DEC-09 — Retain the failed experiment outside the supported product workflow
 
 **Date:** 2026-09-12 · **Status:** Active · **Reversibility:** Two-way
 
-The on-device semantic mode [failed its release gate](evaluation-semantic-result.md) and
-[fp32 did not rescue it](evaluation-dtype-experiment.md). The pre-agreed rule said cut. The
-code is **not** being deleted. It stays, off by default, relabelled in the UI as
-*"failed evaluation, kept for reference"*, with the measured numbers in every answer it
-produces.
+q8 and fp32 failed the quality bounds on the small development set. Close this feature as a supported product capability. Preserve its source, captured data and standalone harness for inspection. The normal Ask selector and supported walkthrough expose Basic and optional OpenAI modes, not the failed device experiment.
 
-**Why not delete it.** Two distinct questions were being conflated. *Should this ship as a
-product feature?* — no, and that is settled: it is off by default, relabelled, and recommended
-against in its own output. *Should the code and its evidence be destroyed?* — no. The harness,
-the captured vectors, the threshold sweep and the two postmortems are the most informative
-artefacts in this repository, and they only make sense alongside the code they describe.
+fp32 did not rescue this configuration; the experiment does not isolate model capacity as the cause. A future proposal needs validated labels and a new evaluation plan. No release threshold was relaxed.
 
-**What this is not.** It is not a reprieve, and not "keep it in case it gets better". The
-feature is closed as a product decision. Reopening it requires a new bar agreed before a new
-measurement — see DEC-04 and the hybrid note below.
+## DEC-10 — Correct evidence and latency reporting
 
-**Trade-off, stated plainly.** A reader can still select a mode known to perform badly. That is
-mitigated by the label, the default, and the first line of every answer it returns — but not
-eliminated. The alternative was deleting the evidence, which is worse for this repository's
-actual purpose.
+The original feature was implemented before the evaluation framework. The thresholds were recorded before captured semantic measurements, not before implementation. Correct contradictory status reports accordingly.
 
-**What would change my mind.** A real user selecting it and being misled despite the labelling.
-At that point the honest move is deletion, because a warning a user can click past is a
-disclosure, not a control — the same standard applied to the identity-gateway header in
-[DEC-06](#dec-06--refuse-to-serve-when-no-trusted-identity-gateway-is-declared).
-
-**Hybrid retrieval is a different feature.** Lexical scores 0.00 absent-topic false positives
-where semantic scores 0.50; semantic scores 1.00 recall on D2 where lexical scores 0.33. The
-failure modes are complementary and that remains the most interesting untested signal in the
-data. If it is built, it gets its own threshold set agreed before measurement and its own entry
-here. It is not a reason to set aside this result.
+Saved-hit lookup duration is not inference latency. Require paired browser timing data for semantic latency, or report NOT_MEASURED and block the gate. q8 has seven recorded worker round-trips (sample p95 38 ms). fp32 has no committed per-query timing evidence. Preserve quality thresholds and results; narrow conclusions to this pipeline and sample.

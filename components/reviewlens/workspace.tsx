@@ -72,7 +72,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { DevicePanel, useDeviceIndex } from "./device-panel";
+import { useDeviceIndex } from "./device-panel";
 import { needsDeviceEvidence } from "@/lib/reviewlens/device-answer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toaster } from "@/components/ui/sonner";
@@ -983,7 +983,7 @@ export default function Workspace() {
                           <Picker
                             label="Answer mode"
                             value={searchMode}
-                            options={["basic", "device", "openai"]}
+                            options={["basic", "openai"]}
                             labels={{
                               basic: "Basic analysis",
                               device:
@@ -1692,13 +1692,11 @@ export default function Workspace() {
             </section>
           </TabsContent>
           <TabsContent value="settings">
-            {dataset && (
-              <DevicePanel
-                device={device}
-                count={dataset.count}
-                disabled={!!busy}
-              />
-            )}
+            <section className="panel">
+              <h2>On-device experiment retired</h2>
+              <p className="muted">The tested on-device search did not meet its quality targets.
+                Basic analysis remains available without a key.</p>
+            </section>
             <SettingsPanel
               configuration={configuration}
               usage={usage}
@@ -2188,8 +2186,7 @@ function SettingsPanel({
         </div>
         <p className="muted">
           The evidence engine handles rankings, calculations and keyword-based
-          answers without a key. Use on-device semantic search without an API
-          key, or connect OpenAI for generated interpretations. OpenAI API
+          answers without a key. Optional OpenAI generation has not been quality-evaluated. OpenAI API
           billing is separate from ChatGPT Plus.
         </p>
         {configuration.keyInvalid && (

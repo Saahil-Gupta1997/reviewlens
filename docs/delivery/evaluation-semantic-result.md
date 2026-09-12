@@ -3,7 +3,7 @@
 **Date:** 2026-09-12 · **Split:** dev (7 cases) · **Gate:** `semantic_release` · **Result: FAIL**
 
 The on-device model ran in a real browser for the first time, its output was scored against
-the golden set, and it did not clear the bar agreed before the feature was built.
+the golden set, and it did not clear the bar agreed before the captured semantic measurements.
 
 This document reports that result because the
 [release gates](release-gates.md) require reporting it either way. A missed gate is a result.
@@ -28,13 +28,12 @@ Getting this far required fixing a defect that made the feature unable to start 
 | Retriever | recall@5 | precision@5 | MRR | absent-topic FP | p95 ms |
 | --- | --- | --- | --- | --- | --- |
 | lexical-baseline | 0.200 | 0.180 | 0.400 | **0.00** | ~13 |
-| on-device-semantic | **0.267** | **0.320** | 0.400 | **0.50** | <1 |
+| on-device-semantic | **0.267** | **0.320** | 0.400 | **0.50 (1/2)** | 38 |
 | **Gate** | ≥ 0.70 | ≥ 0.50 | — | ≤ 0.25 | ≤ 1500 |
 | | FAIL | FAIL | — | FAIL | PASS |
 
 Semantic retrieval beats the lexical baseline on recall (0.267 vs 0.200) and precision (0.320
-vs 0.180). It is **worse on the metric that matters most**: it invents evidence for topics the
-corpus does not contain, where lexical retrieval correctly returned nothing.
+vs 0.180). It returned an irrelevant existing review for one of two absent-topic questions; lexical returned none for both. This is a retrieval false positive, not fabricated review text.
 
 ## Per case
 
@@ -50,30 +49,11 @@ corpus does not contain, where lexical retrieval correctly returned nothing.
 
 D2 proves the mechanism works. D1 proves it is not reliable.
 
-## Can calibration fix it?
+## Threshold sweep
 
-No. `node scripts/threshold-sweep.mjs` evaluates every floor from −0.05 to 0.60:
+None of the 66 tested floors from −0.05 to 0.60 clears the quality bounds on this development set. Relevant and irrelevant scores overlap in these cases. A single global floor did not rescue this pipeline on this data; this does not establish failure on every corpus or identify a model-capacity root cause.
 
-**0 of 66 thresholds clear the gate.** Best achievable recall@5 at *any* threshold is **0.673**
-— below the 0.70 bar — and only at −0.05, which means no filtering at all and a 100%
-absent-topic false-positive rate.
-
-The decisive number:
-
-| | Score |
-| --- | --- |
-| Highest **noise** score on an absent-topic question (D6) | **0.2795** |
-| Best **correct** answer on D3 | **0.2796** |
-| Weakest best-relevant score across all cases (D5) | **0.1774** |
-| Highest absent-topic false positive (D7) | **0.3040** |
-
-A true positive and a pure false positive are separated by **one ten-thousandth**. The weakest
-signal (0.1774) sits far below the strongest noise (0.3040). The distributions do not merely
-touch — they interleave.
-
-**No similarity floor can admit the weakest correct answer while rejecting the strongest false
-positive.** [DEC-04](decision-log.md), which planned to calibrate the 0.30 heuristic, is
-answered: there is nothing to calibrate toward.
+The old sub-millisecond latency was saved-hit lookup time and is invalid. The corrected q8 report uses seven recorded browser worker round-trips (22–38 ms; sample p95 38 ms), excluding initial indexing/download. The precision column uses relevant hits divided by returned results, up to five, averaged across relevant-topic questions.
 
 ## Why D1 matters most
 
@@ -96,22 +76,9 @@ routine, the options are to change approach or cut the feature.
 The thresholds are not being moved. They were agreed before measurement specifically so this
 could not happen, and `eval/thresholds.json` says so in its own note.
 
-## What would change the answer
+## Follow-up completed
 
-Ranked by expected value, not by effort:
-
-1. **A stronger embedding model.** MiniLM-L6 at q8 is the smallest useful option; the
-   quantisation and the 6-layer depth are both plausible causes. Test fp32 MiniLM-L6 first to
-   separate quantisation damage from model capacity — that is a one-line change to the harness.
-2. **Hybrid retrieval.** Lexical is perfect on absent topics (0.00 FP) and semantic is perfect
-   on D2. Union for recall, intersection or reranking for precision. The two failure modes are
-   complementary, which is the strongest signal in this data.
-3. **Cut it.** The measured gain over lexical is 0.067 recall, bought with a 1.7 MB runtime
-   download, a CDN dependency, device storage and a 50% absent-topic false-positive rate. On
-   this evidence the feature is not worth its cost.
-
-My recommendation is 1 then 2, with a hard stop: if fp32 does not move recall above 0.50, take
-option 3.
+The fp32 experiment also failed. See [the result](evaluation-dtype-experiment.md). The on-device feature is no longer supported; its harness is retained for inspection. No threshold was relaxed and no further model experiment is scheduled.
 
 ## Honest limits of this result
 
