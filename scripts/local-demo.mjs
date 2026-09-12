@@ -1,6 +1,6 @@
 // Single-user loopback demo only. Never use this identity adapter in production.
 import { createServer } from 'node:http';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, readdir } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { Miniflare } from 'miniflare';
@@ -14,7 +14,16 @@ async function asset(request){
  const file=path.resolve(base,relative);if(!file.startsWith(base+path.sep))return new Response('Not found',{status:404});
  try{return new Response(await readFile(file),{headers:{'Content-Type':types[path.extname(file)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}
 }
-const mf=new Miniflare({modules:true,modulesRules:[{type:'ESModule',include:['**/*.js']}],scriptPath:'dist/server/index.js',
+// Miniflare must be handed every server module explicitly. Using scriptPath with
+// modulesRules leaves vinext's dynamic imports unresolved and fails with
+// ERR_MODULE_DYNAMIC_SPEC on Node 25+. tests/rendered-html.test.mjs does the same.
+const serverRoot=path.resolve('dist/server');
+const serverFiles=[];
+async function collect(dir){for(const entry of await readdir(dir,{withFileTypes:true})){const file=path.join(dir,entry.name);if(entry.isDirectory())await collect(file);else if(entry.name.endsWith('.js'))serverFiles.push(file);}}
+await collect(serverRoot);
+const serverEntry=path.join(serverRoot,'index.js');
+const modules=[serverEntry,...serverFiles.filter(f=>f!==serverEntry)].map(file=>({type:'ESModule',path:file}));
+const mf=new Miniflare({modules,
  compatibilityDate:'2026-05-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'reviewlens-local'},d1Persist:path.join(state,'d1'),
  bindings:{KEY_ENCRYPTION_SECRET:await readFile(secretPath,'utf8'),IDENTITY_GATEWAY:'local-loopback-single-user'},serviceBindings:{ASSETS:asset}});
 const db=await mf.getD1Database('DB');
