@@ -1,73 +1,26 @@
 # Launch readiness review
 
-**Release:** ReviewLens 0.1.0 · **Date:** 2026-09-12 · **Decision owner:** Saahil Gupta
+**Current decision:** Basic analysis is the supported portfolio demonstration. On-device semantic retrieval is a failed experiment. OpenAI RAG remains an opt-in, unevaluated generation path. This review supersedes the earlier “model never ran” status.
 
-## Decision
+| Scope | Decision | Evidence and remaining limits |
+| --- | --- | --- |
+| Basic analysis | GO for a single-user portfolio demonstration | Automated engine/API tests, build and production smoke; fictional data. No adoption or business-impact claim. |
+| On-device MiniLM | NO-GO as a supported product feature; experiment retained | Real Chrome 152 execution captured on 2026-09-12. q8 recall 0.267, returned-result precision 0.320, absent-topic errors 1/2. fp32 did not improve recall. Both fail quality gates. |
+| OpenAI RAG | Experimental opt-in only | Simulated provider and quote checks pass; live generation faithfulness has not been evaluated. No production-quality approval. |
+| Multi-tenant public service | NO-GO | Gateway declaration is a configuration check, not cryptographic authentication. |
 
-| Scope                                                                               | Call                                                                                           | Basis                                                                                                                                                                                           |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Basic analysis — statistics, complaint ranking, scoped evidence, comparison, import | **GO**                                                                                         | 36 automated tests green; retrieval regression gate green; deterministic calculations verified across all three answer modes                                                                    |
-| OpenAI RAG — user-funded generated interpretations                                  | **GO, gated**                                                                                  | Quote verification and scope re-check are tested against a simulated provider; requires the user's own key; capped at 100 requests/day. Generation _quality_ is unmeasured and labelled as such |
-| On-device semantic search — MiniLM in a browser worker | **CUT as a product feature.** Kept in the codebase, off by default, relabelled "failed evaluation" ([DEC-09](decision-log.md)) | Ran on Chrome 152 on 2026-09-12, then missed its gate on 3 of 4 bounds: recall@5 0.267 vs 0.70, precision@5 0.320 vs 0.50, absent-topic FP 0.50 vs 0.25. No threshold clears it, and [fp32 made recall worse](evaluation-dtype-experiment.md) |
-| Multi-tenant hosted deployment                                                      | **NO-GO**                                                                                      | Tenant isolation depends on a gateway-injected header (RISK-07). The API now refuses to serve without `IDENTITY_GATEWAY`, which makes the failure loud, not solved                              |
+The original implementation preceded the evaluation harness and thresholds. Thresholds were recorded before the captured semantic measurements, not before implementation. No thresholds were relaxed after the failed results.
 
-## The no-go, in full
+## Timing correction
 
-The on-device semantic feature is the most interesting thing in this product and the reason
-the repository exists. It is also the thing I declined to ship as a default.
+The old evaluator timed reading saved hit IDs, not semantic search. Its sub-millisecond semantic latency and PASS are invalid. The corrected evaluator accepts explicitly paired browser timing metadata. q8 has seven recorded worker round-trips (22–38 ms; sample p95 38 ms). fp32 has no committed per-query timing capture: its latency gate is NOT_MEASURED and cannot pass. Neither is a load-test percentile.
 
-**What is true:** the worker, the IndexedDB checkpointing, the pause/resume, the cache
-fingerprinting, the scope re-check and the quote verification are all written, typed and
-tested. The code path is exercised end-to-end with synthetic 384-dimension vectors.
+See the generated [q8 report](../../eval/reports/semantic-q8.md) and [fp32 report](../../eval/reports/semantic-fp32.md).
 
-**What is not true:** that any of it works. The authoring environment could not download the
-model or runtime from Hugging Face and jsDelivr, so `Xenova/all-MiniLM-L6-v2` has never
-produced a single embedding in this system. Synthetic-vector tests prove the plumbing moves
-numbers correctly. They say nothing about whether the numbers mean anything.
+## Still unverified
 
-**Why that matters more than usual here.** The feature's failure mode is not a crash. It is
-returning plausible, well-formatted, quote-verified passages that are not actually relevant —
-and doing so with a similarity score that a reader will mistake for confidence. A crash is
-self-announcing. This is not. Shipping it on by default would produce a tool that looks like
-it is working while giving a product manager wrong evidence for a roadmap decision.
+- Full app on-device UAT, pause/resume, page reload and cross-browser cache lifecycle. The captured harness verified an in-session storage re-read, not a reload.
+- Independent relevance labels and held-out retrieval performance. The development sample contains five relevant-topic and two absent-topic questions over 24 fictional reviews.
+- Live provider faithfulness, load/concurrency behaviour and business outcomes.
 
-**What would flip this to GO:** completing the [on-device UAT](uat-on-device.md), capturing
-the resulting hits, and clearing the `semantic_release` gate in `eval/thresholds.json` —
-recall@5 ≥ 0.70, precision@5 ≥ 0.50, absent-topic false-positive rate ≤ 0.25. Those bounds
-were agreed before the feature was measured, specifically so they could not be adjusted to
-whatever the model happened to produce.
-
-## Evidence reviewed
-
-| Evidence                                              | Status                                                         | Limitation                                                                 |
-| ----------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `npx tsc --noEmit`                                    | Pass                                                           | Types, not behaviour                                                       |
-| `npm test` — 52 tests + production smoke                                 | Pass                                                           | Simulated provider; synthetic vectors for the device path                  |
-| `npm run eval` — retrieval regression gate, dev split | Pass · recall@5 0.200, precision@5 0.180, absent-topic FP 0.00 | 24-review fixture, one annotator. A regression gate, not an accuracy claim |
-| Production build and one rendered-HTML smoke test     | Pass                                                           | Compilation is not browser inference                                       |
-| Owner walkthrough with supplied fixtures              | Reported correct                                               | Self-reported; not an independent audit                                    |
-| Real MiniLM download, inference, cache lifecycle      | **Not run**                                                    | External model download unavailable in the authoring environment           |
-| Generated-answer faithfulness against a rubric        | **Not run**                                                    | No funded provider evaluation                                              |
-| Cross-browser IndexedDB lifecycle                     | **Not run**                                                    | Requires the device UAT                                                    |
-| Load or concurrency testing                           | **Not run**                                                    | Single-user scope; see [DEC-07](decision-log.md)                           |
-
-## Conditions attached to the GO
-
-1. On-device mode ships **off by default**, labelled "limited evidence", with the
-   similarity cutoff documented as an uncalibrated heuristic.
-2. The README leads with what has _not_ been established, not with the feature list.
-3. No accuracy, time-saving, adoption or revenue figure is published anywhere in the
-   repository. The metrics tree records targets as _proposed_, with instrumentation status
-   marked honestly.
-4. `IDENTITY_GATEWAY` must be set for any deployment reachable from the internet. The API
-   returns 503 without it.
-
-## What I would do differently
-
-I built the feature before I built the way to measure it. The evaluation harness, the golden
-set and the thresholds all came after the code, which is why the release ends with a no-go
-instead of a number. Had the golden set existed first, the lexical baseline of recall@5 = 0.20
-would have been known in week one — and that number is the strongest justification for the
-feature. The correct order is: label the data, measure the baseline, agree the bar, then
-build. That is now [DEC-08](decision-log.md) and the first item on the
-[program plan](program-plan.md).
+The failed experiment is excluded from the supported walkthrough. The harness and source remain available for inspection. Current priorities are accurate evidence, a working Basic demonstration and reproducible verification, not another model experiment.

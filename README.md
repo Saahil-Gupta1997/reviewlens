@@ -6,26 +6,33 @@ An AI/ML Technical Program Manager portfolio project by **Saahil Gupta**, built 
 assistance ([who did what](docs/product-case-study.md#ownership)).
 
 ReviewLens answers questions about product reviews with verifiable statistics, traceable
-source evidence, and optional semantic retrieval. The delivery problem it exists to
+source evidence, and an experimental retrieval path. The delivery problem it exists to
 demonstrate is the one every AI feature has: **the demo works, and that tells you nothing
 about whether the feature works.**
 
 ---
+
+## Watch the working workflow (48 seconds)
+
+![Captioned API walkthrough from actual local production-build responses](docs/demo/reviewlens-api-walkthrough.gif)
+
+[MP4 download](docs/demo/reviewlens-api-walkthrough.mp4) · [Captured requests and responses](docs/demo/captured-workflow.json)
+
+This is a captioned replay of real HTTP requests to the production build, **not a browser screen recording**. It shows 20 fictional reviews, 4/20 two-star reviews, complaint ranking, exact source checks, EU scope and saved history. No API key or model inference was used. The cloud browser could not capture the local app in this session.
 
 ## Start here
 
 | If you are here to judge                   | Read                                                                                                                                   |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | How this was delivered, gated and measured | **[The delivery narrative](docs/delivery/narrative.md)** — the whole project on one page |
-| Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, lint, 52 tests, build, retrieval gate                                               |
+| Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, lint, automated tests, build, retrieval gate                                               |
 | What the product does                      | [Three-minute walkthrough](#three-minute-walkthrough)                                                                                  |
 
 ## The three things worth your time
 
 **1. A measured baseline instead of an assumption.** The hypothesis was that keyword search
 misses paraphrased questions. That was a belief until it was measured. It is now a number: on
-a human-labelled golden set, lexical retrieval scores **recall@5 = 0.20**. Four in five
-relevant reviews are missed. On _"Which customers are locked out of their accounts?"_ it
+a human-labelled golden set, lexical retrieval scores **recall@5 = 0.20**. This is mean recall across five relevant-topic development questions. On _"Which customers are locked out of their accounts?"_ it
 returns nothing at all. That number justifies the semantic feature and sets the bar it has to
 clear.
 
@@ -53,15 +60,14 @@ Stated before the feature list, deliberately.
 
 - **Semantic retrieval quality is now measured, and it FAILED its release gate.** The model
   ran in a real browser on 2026-09-12 and scored recall@5 = 0.267 against a bar of 0.70, with a
-  50% absent-topic false-positive rate. A threshold sweep shows no similarity floor fixes it.
+  one false positive across two absent-topic questions. None of the 66 tested floors cleared the quality bounds on this development set.
   See [the result](docs/delivery/evaluation-semantic-result.md).
 - **Generated-answer faithfulness.** Quote _existence_ is verified in code. Claim _support_ is
   unmeasured.
 - **Cross-browser IndexedDB lifecycle**, held-out retrieval accuracy, and live paid-provider
   quality.
 
-No accuracy, time-saving, adoption or revenue figure appears anywhere in this repository,
-because none has been measured. [Metrics](docs/delivery/metrics.md) separates the numbers that
+No real-world accuracy, time-saving, adoption or revenue result is claimed. Development retrieval metrics are reported with their sample limits. [Metrics](docs/delivery/metrics.md) separates the numbers that
 are measured from the targets that are merely proposed.
 
 ---
@@ -86,8 +92,9 @@ retrieval, not generative RAG.
 2. Ask **What negative do most people point to?** and open a source review.
 3. Ask **What percentage are two-star?** to see a calculated answer with its denominator.
 4. Compare two versions, then filter to a region.
-5. In Settings, choose **Download model & build index**. No API key is needed. Select
-   on-device mode in Ask to retrieve passages by meaning.
+5. Inspect the source evidence behind your finding. Basic analysis requires no API key.
+
+On-device retrieval is a failed experiment, excluded from this supported walkthrough. Its standalone harness remains available under `scripts/device-harness/`.
 
 The hosted workspace is private — a reader cannot assume access
 ([ISS-05](docs/delivery/raid-log.md)). Use the local run below, or the
@@ -112,7 +119,7 @@ required. This loopback adapter must never be exposed as a production server.
 npm run verify
 ```
 
-Runs the typecheck, lint, 52 tests, the production build, and the retrieval
+Runs the typecheck, lint, automated tests, the production build, and the retrieval
 quality gate. Every gate is listed in [release gates](docs/delivery/release-gates.md).
 
 ## Architecture

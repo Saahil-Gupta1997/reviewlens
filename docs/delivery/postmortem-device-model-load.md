@@ -30,7 +30,7 @@ The feature shipped — off by default and labelled "limited evidence", which li
 but it was not merely unverified. It was broken. Every user selecting on-device mode would
 have received the generic failure message and fallen back to Basic analysis.
 
-No data was lost or exposed. The fallback path worked correctly, which is the one thing that
+No data loss or exposure was reported. The fallback path worked correctly, which is the one thing that
 went right.
 
 ## Why it went undetected for so long
@@ -49,7 +49,7 @@ Every subsequent artefact inherited that mistaken diagnosis: the README's "not y
 established" list, ACC-01 in the risk assessment, ISS-03 in the RAID log, and the launch
 readiness review all attributed the gap to environment rather than to a defect.
 
-**No test could have caught it.** Every on-device test used synthetic vectors and never loaded
+**No existing test exercised the import.** Every on-device test used synthetic vectors and never loaded
 the runtime. The tests exercised `chunks()`, `cosine()`, `rank()` and the message protocol —
 all of which were correct. The one line that was wrong was the one line no test touched.
 
@@ -72,7 +72,7 @@ Import `dist/transformers.min.js` — the self-contained bundle — and record i
 `transformers.web.js` must not be used, so the next person does not "correct" it back.
 
 Verified by execution: 24/24 reviews indexed in 11.2 s on Chrome 152 / Windows 11, q8 WASM
-single-threaded, persistence confirmed across a re-read, 7 queries answered at 22–38 ms each.
+single-threaded, in-session storage re-read confirmed (not a page reload), 7 queries answered at 22–38 ms each.
 
 ## What it revealed
 
@@ -91,7 +91,7 @@ Two failures were stacked, and the first was hiding the second.
 | Never map an unrecognised error to a specific cause — say "could not load" and log the real message | Design | **Done.** `describeFailure()` in `semantic-core.js`, with tests asserting the original SyntaxError is not blamed on the network |
 | A test that actually loads the runtime, even without scoring quality | Test | **Open** — needs a browser-capable CI job |
 | `scripts/device-harness/` so anyone can reproduce a real run in one command | Tooling | Done |
-| Correct every document that attributed the gap to the environment | Docs | Done |
+| Correct current documents that attributed the gap to the environment | Docs | Reconciled in delivery closure |
 
 ## The handler itself, since fixed
 
@@ -109,5 +109,5 @@ invisible to it.
 
 "We could not test it in this environment" deserves the same scepticism as any other
 unverified claim — **including when it is my own explanation for why something is unverified.**
-The environment story was plausible, self-consistent, and wrong for three weeks. It cost
+The environment story was plausible, self-consistent, and wrong until direct execution. It cost
 nothing but an hour to check, and nobody checked.

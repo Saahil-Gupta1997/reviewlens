@@ -1,16 +1,8 @@
-# On-device UAT
+# On-device UAT — deferred experiment
 
-The test plan for the feature that has not shipped. This is **ISS-03**, the P0 blocking a
-default-on decision on on-device semantic search.
+The on-device feature is not supported. q8 and fp32 were measured on the development fixture and failed quality gates. ISS-03 (first browser execution) is closed; ISS-07 is closed by the scope decision, not by a quality fix.
 
-**Update 2026-09-12: Part 2 has been run.** The model executed on Chrome 152 / Windows 11 and
-the result is in [evaluation-semantic-result.md](evaluation-semantic-result.md) - it **missed
-the gate**. Reaching that point required fixing a defect that made the runtime unable to load
-at all ([postmortem](postmortem-device-model-load.md)).
-
-Part 1 (the functional checklist below) is still **largely not run**: steps 1, 2, 4 and 13 are
-covered by the harness, but the failure-mode steps - blocked CDN, cleared storage mid-index,
-pause/resume, long-review tails - remain untested.
+The standalone harness exercised indexing and an in-session IndexedDB re-read. It did not complete the full app checklist below, prove page-reload persistence, or verify server dataset deletion. Unexecuted app steps remain Not run. This checklist is retained for a future candidate, not an active release blocker for Basic analysis.
 
 ## Why a checklist is not enough
 

@@ -64,7 +64,7 @@ delivery" are different claims, and only one of them is demonstrable.
 test suites, the evaluation harness, and drafting of this documentation.
 
 **What this is evidence of:** scoping an AI feature against a cost constraint, defining what
-"working" means before building it, enforcing that definition mechanically, root-causing a
+"working" means before measuring the semantic results, enforcing that definition mechanically, root-causing a
 defect in analytical output, and declining to ship against my own evidence.
 
 **What it is not evidence of:** managing an enterprise engineering team, running a production

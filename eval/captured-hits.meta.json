@@ -8,8 +8,18 @@
   "index_ms": 11242,
   "status_after_refresh": 24,
   "persistence_verified": true,
-  "search_latency_ms": { "D1": 38, "D2": 31, "D3": 31, "D4": 22, "D5": 31, "D6": 24, "D7": 27 },
+  "search_latency_ms": {
+    "D1": 38,
+    "D2": 31,
+    "D3": 31,
+    "D4": 22,
+    "D5": 31,
+    "D6": 24,
+    "D7": 27
+  },
   "threshold": 0.3,
   "harness": "scripts/device-harness/ running the shipped public/semantic-worker.js unmodified",
-  "note": "First execution of the on-device model in a browser. Required fixing the runtime import in public/semantic-worker.js; see docs/delivery/postmortem-device-model-load.md."
+  "note": "First execution of the on-device model in a browser. Required fixing the runtime import in public/semantic-worker.js; see docs/delivery/postmortem-device-model-load.md. Timing scope follows the committed harness. status_after_refresh is an in-session storage re-read, not a page reload.",
+  "hits_sha256": "9d4b2d764b032fca0a012a31290d82e87545c8a5e20d5f53d328ca1b985b5b4b",
+  "measurement": "Elapsed browser worker search request through response after indexing; includes query embedding, index read/validation, ranking and message round-trip; excludes initial download/indexing."
 }

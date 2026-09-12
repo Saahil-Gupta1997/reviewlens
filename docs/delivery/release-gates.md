@@ -14,7 +14,7 @@ npm run verify
 | --- | --------------------- | ---------------------- | ---------------------------------------------------------------------------- |
 | 1 | Types | `npx tsc --noEmit` | Any type error |
 | 2 | Lint | `npm run lint` | ESLint error |
-| 3 | Behaviour | `npm test` — 52 tests + smoke | Any failure across engine, API, device-ranking and rendered-HTML suites |
+| 3 | Behaviour | `npm test` — automated tests + smoke | Any failure across engine, API, device-ranking and rendered-HTML suites |
 | 4 | Build | `npm run build` (inside `npm test`) | Production build or the rendered-HTML smoke test fails |
 | 5 | **Retrieval quality** | `npm run eval` | recall@5 < 0.19, precision@5 < 0.17, absent-topic FP > 0.30, or p95 > 250 ms |
 
@@ -33,7 +33,7 @@ green while making retrieval worse still stops the pipeline.
 
 | #   | Gate                                                         | Owner role   | State                                         |
 | --- | ------------------------------------------------------------ | ------------ | --------------------------------------------- |
-| 8 | On-device UAT on a real browser                              | QA           | **Not run** — ISS-03, blocks default-on       |
+| 8 | On-device UAT on a real browser                              | QA           | Harness executed; full app and cross-browser UAT remain incomplete; feature not supported       |
 | 9 | Cross-browser IndexedDB lifecycle                            | QA           | **Not run**                                   |
 | 10 | Faithfulness review of generated answers                     | ML / Product | **Not run** — ISS-04                          |
 | 11 | `IDENTITY_GATEWAY` set for any internet-reachable deployment | Backend      | Enforced in code — API returns 503 without it |
