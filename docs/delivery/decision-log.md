@@ -68,7 +68,7 @@ not a week.
 
 ## DEC-04 — Ship the 0.30 similarity cutoff as an uncalibrated heuristic, labelled as one
 
-**Date:** 2026-09 · **Status:** Pending evidence · **Reversibility:** Two-way
+**Date:** 2026-09 · **Status:** **Answered 2026-09-12 — nothing to calibrate** · **Reversibility:** Two-way
 
 Passages below cosine 0.30 are suppressed. The number was chosen by inspection on development
 data and is documented everywhere it appears as a heuristic, not a probability.

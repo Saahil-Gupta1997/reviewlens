@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ReviewLens on-device harness</title>
+    <style>
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        margin: 24px;
+        max-width: 900px;
+      }
+      pre {
+        background: #f4f4f5;
+        padding: 12px;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      #status {
+        font-weight: 600;
+      }
+      .done {
+        color: #15803d;
+      }
+      .fail {
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ReviewLens on-device harness</h1>
+    <p>
+      Runs the shipped <code>public/semantic-worker.js</code> unmodified against the golden-set
+      dev cases. Exercises real model download, q8 WASM inference, chunking, IndexedDB
+      persistence and <code>rank()</code> at the shipped 0.30 threshold.
+    </p>
+    <p id="status">Starting…</p>
+    <h2>Captured hits</h2>
+    <pre id="out">(pending)</pre>
+    <h2>Log</h2>
+    <pre id="log"></pre>
+
+    <script type="module">
+      const statusEl = document.getElementById('status');
+      const outEl = document.getElementById('out');
+      const logEl = document.getElementById('log');
+      const log = (m) => {
+        logEl.textContent += m + '\n';
+        statusEl.textContent = m;
+      };
+
+      // Mirrors lib/reviewlens/device-client.ts: one worker, request ids, progress messages.
+      const worker = new Worker('/semantic-worker.js', { type: 'module' });
+      const pending = new Map();
+      worker.onmessage = ({ data }) => {
+        const entry = pending.get(data.id);
+        if (!entry) return;
+        if (data.progress) return log('  ' + data.message);
+        pending.delete(data.id);
+        data.error ? entry.reject(Error(data.error)) : entry.resolve(data.result);
+      };
+      worker.onerror = (e) => log('WORKER ERROR: ' + (e.message || 'unknown'));
+
+      const call = (action, payload) =>
+        new Promise((resolve, reject) => {
+          const id = crypto.randomUUID();
+          pending.set(id, { resolve, reject });
+          worker.postMessage({ id, action, dataset: 'harness', ...payload });
+        });
+
+      // Reads the vectors the worker persisted to IndexedDB and scores every review against
+      // the query with threshold 0, so a threshold sweep can be run offline. Embeds the
+      // query through a page-side pipeline using the identical model/revision/dtype.
+      let pagePipe;
+      async function scoreAll(question, allowedIds, core) {
+        if (!pagePipe) {
+          const { pipeline, env } = await import(
+            'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js'
+          );
+          env.allowLocalModels = false;
+          env.backends.onnx.wasm.numThreads = 1;
+          env.backends.onnx.wasm.proxy = false;
+          pagePipe = await pipeline('feature-extraction', core.MODEL, {
+            revision: core.REVISION,
+            dtype: 'q8',
+            device: 'wasm',
+          });
+        }
+        const out = await pagePipe(question, { pooling: 'mean', normalize: true });
+        const q = Array.from(out.data);
+        const db = await new Promise((res, rej) => {
+          const r = indexedDB.open('reviewlens-device-v1', 1);
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        const records = await new Promise((res, rej) => {
+          const r = db
+            .transaction('reviews')
+            .objectStore('reviews')
+            .index('dataset')
+            .getAll('harness');
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => rej(r.error);
+        });
+        return core
+          .rank(q, records, allowedIds, 24, -1)
+          .map((h) => ({ reviewId: h.reviewId, score: Number(h.score.toFixed(4)) }));
+      }
+
+      window.__result = null;
+      (async () => {
+        const started = Date.now();
+        try {
+          const raw = await (
+            await fetch('/data/ReviewLens_Validation_Reviews.json')
+          ).json();
+          const golden = await (await fetch('/data/golden-set.json')).json();
+          const reviews = raw.map((r) => ({ id: r.review_id, text: r.review_text }));
+          const allowedIds = reviews.map((r) => r.id);
+          log(`Loaded ${reviews.length} reviews, ${golden.cases.length} golden cases.`);
+
+          await call('clear', { reviews: [] });
+          log('Cleared any previous device index.');
+
+          const indexStart = Date.now();
+          const indexed = await call('index', { reviews });
+          const indexMs = Date.now() - indexStart;
+          log(`Indexed ${indexed.indexed}/${reviews.length} in ${indexMs} ms.`);
+
+          const status = await call('status', { reviews });
+          log(`Status after refresh: ${status.indexed} indexed (persistence check).`);
+
+          // Unthresholded scores for every review, so the 0.30 floor can be analysed rather
+          // than assumed. Uses the shipped cosine/chunking via semantic-core.
+          const core = await import('/semantic-core.js');
+          const rawScores = {};
+
+          const dev = golden.cases.filter((c) => c.split === 'dev');
+          const hits = {};
+          const latencies = {};
+          for (const c of dev) {
+            const t = Date.now();
+            const r = await call('search', { reviews, question: c.question, allowedIds });
+            latencies[c.id] = Date.now() - t;
+            rawScores[c.id] = await scoreAll(c.question, allowedIds, core);
+            hits[c.id] = r.hits.map((h) => ({
+              reviewId: h.reviewId,
+              score: Number(h.score.toFixed(4)),
+            }));
+            log(
+              `${c.id} (${latencies[c.id]} ms) -> ${r.hits.length ? r.hits.map((h) => h.reviewId + '@' + h.score.toFixed(3)).join(' ') : '(none)'}`,
+            );
+          }
+
+          window.__result = {
+            captured_at: new Date().toISOString(),
+            user_agent: navigator.userAgent,
+            model: 'Xenova/all-MiniLM-L6-v2@751bff3 q8 wasm single-thread',
+            reviews_indexed: indexed.indexed,
+            index_ms: indexMs,
+            status_after_refresh: status.indexed,
+            search_latency_ms: latencies,
+            hits,
+            raw_scores_unthresholded: rawScores,
+          };
+          outEl.textContent = JSON.stringify(window.__result, null, 2);
+          statusEl.className = 'done';
+          statusEl.textContent = `COMPLETE in ${Math.round((Date.now() - started) / 1000)}s`;
+          document.title = 'HARNESS COMPLETE';
+        } catch (e) {
+          statusEl.className = 'fail';
+          statusEl.textContent = 'FAILED: ' + (e.message || e);
+          document.title = 'HARNESS FAILED';
+          log('FAILED: ' + (e.message || e));
+        }
+      })();
+    </script>
+  </body>
+</html>

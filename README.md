@@ -16,7 +16,7 @@ about whether the feature works.**
 
 | If you are here to judge                   | Read                                                                                                                                   |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| How this was delivered, gated and measured | **[Delivery artifacts](docs/delivery/README.md)** — start with the [launch readiness review](docs/delivery/launch-readiness-review.md) |
+| How this was delivered, gated and measured | **[The delivery narrative](docs/delivery/narrative.md)** — the whole project on one page |
 | Whether the engineering is real            | [`npm run verify`](#verify-it-yourself) — types, lint, 52 tests, build, retrieval gate                                               |
 | What the product does                      | [Three-minute walkthrough](#three-minute-walkthrough)                                                                                  |
 
@@ -41,19 +41,20 @@ holdout split refuses to run without an explicit confirmation flag, and every ho
 appended to an audit log, so _"we did not tune on the evaluation set"_ is checkable rather
 than promised.
 
-**3. A no-go that stuck.** On-device semantic search is built, typed and tested — and is
-**not shipped as a default mode**, because the model has never actually run in a browser. The
-evaluation harness for it is finished and waiting for input. The call, and the evidence behind
-it, is in the [launch readiness review](docs/delivery/launch-readiness-review.md).
+**3. A no-go, now backed by measurement rather than caution.** On-device semantic search was
+held back because it was unverified. It has since been run and scored: it **missed its gate on
+three of four bounds**, and getting it to run at all uncovered a defect that made the feature
+[unable to start in any browser](docs/delivery/postmortem-device-model-load.md). The thresholds
+were not moved. See [the result](docs/delivery/evaluation-semantic-result.md).
 
 ## What is not established
 
 Stated before the feature list, deliberately.
 
-- **On-device model loading and inference in a real browser.** Never executed. Every test
-  covering that path uses synthetic vectors, which prove the plumbing moves numbers correctly
-  and say nothing about whether the numbers mean anything.
-- **Semantic retrieval quality.** Unmeasured. The harness exists; the input does not.
+- **Semantic retrieval quality is now measured, and it FAILED its release gate.** The model
+  ran in a real browser on 2026-09-12 and scored recall@5 = 0.267 against a bar of 0.70, with a
+  50% absent-topic false-positive rate. A threshold sweep shows no similarity floor fixes it.
+  See [the result](docs/delivery/evaluation-semantic-result.md).
 - **Generated-answer faithfulness.** Quote _existence_ is verified in code. Claim _support_ is
   unmeasured.
 - **Cross-browser IndexedDB lifecycle**, held-out retrieval accuracy, and live paid-provider
@@ -156,7 +157,9 @@ append-only.
 
 ## Documentation
 
-**Delivery** — [index](docs/delivery/README.md) ·
+**Delivery** — [index](docs/delivery/README.md) · [**narrative**](docs/delivery/narrative.md) ·
+[**semantic result**](docs/delivery/evaluation-semantic-result.md) ·
+[**load postmortem**](docs/delivery/postmortem-device-model-load.md) ·
 [launch readiness](docs/delivery/launch-readiness-review.md) ·
 [evaluation](docs/delivery/evaluation.md) ·
 [AI risk assessment](docs/delivery/ai-risk-assessment.md) ·
