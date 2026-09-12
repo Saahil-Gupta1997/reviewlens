@@ -1,0 +1,126 @@
+{
+  "version": "golden-v1",
+  "corpus": "examples/validation/ReviewLens_Validation_Reviews.json",
+  "corpus_size": 24,
+  "labelling": {
+    "labelled_by": "Saahil Gupta",
+    "labelled_on": "2026-09-12",
+    "method": "Single annotator read all 24 reviews and marked every review a product manager would accept as direct evidence for the question. Inter-annotator agreement is NOT established; a second annotator is required before any published accuracy claim.",
+    "known_bias": "The annotator also wrote the questions. Questions were written first, from the product backlog, and labels applied afterwards against the full corpus. This reduces but does not eliminate annotator bias.",
+    "split_rule": "Dev cases may be inspected and tuned against. Holdout cases must never be used to choose a threshold, a term list, or a model. Holdout is run at most once per release candidate."
+  },
+  "cases": [
+    {
+      "id": "D1",
+      "split": "dev",
+      "category": "paraphrase",
+      "question": "Which customers are locked out of their accounts?",
+      "relevant_ids": ["VAL-013", "VAL-014", "VAL-015", "VAL-017", "VAL-018"],
+      "rationale": "Query shares no vocabulary with the corpus; 'locked out' and 'accounts' appear nowhere. VAL-016 is deliberately excluded: that reviewer reports login is broken but also says they get inside, so they are not locked out. Separates semantic matching from term matching and penalises over-broad theme expansion."
+    },
+    {
+      "id": "D2",
+      "split": "dev",
+      "category": "paraphrase",
+      "question": "Does anything take a long time to appear on screen?",
+      "relevant_ids": ["VAL-007", "VAL-010", "VAL-019"],
+      "rationale": "Describes slowness without using 'slow', 'performance', 'lag' or any other taxonomy term."
+    },
+    {
+      "id": "D3",
+      "split": "dev",
+      "category": "paraphrase",
+      "question": "Is anyone struggling to get assistance from the team?",
+      "relevant_ids": ["VAL-012", "VAL-020"],
+      "rationale": "Negative support experiences phrased without 'support', 'help desk' or 'customer service'."
+    },
+    {
+      "id": "D4",
+      "split": "dev",
+      "category": "sentiment-discrimination",
+      "question": "Who is happy with signing in?",
+      "relevant_ids": ["VAL-001", "VAL-002", "VAL-024"],
+      "rationale": "Topic-only retrieval returns all nine login reviews and scores about 0.33 precision. Rewards retrieval that separates polarity from topic. Most likely case to expose a retriever that ignores sentiment."
+    },
+    {
+      "id": "D5",
+      "split": "dev",
+      "category": "paraphrase",
+      "question": "Can people get their information out of the product?",
+      "relevant_ids": ["VAL-008", "VAL-023"],
+      "rationale": "Export capability described as 'get information out'. No taxonomy term present."
+    },
+    {
+      "id": "D6",
+      "split": "dev",
+      "category": "absent-topic",
+      "question": "What do people say about battery life?",
+      "relevant_ids": [],
+      "rationale": "No review mentions battery. A correct system returns nothing. Any result is a false positive and is counted as one."
+    },
+    {
+      "id": "D7",
+      "split": "dev",
+      "category": "absent-topic",
+      "question": "Are there complaints about delivery or shipping?",
+      "relevant_ids": [],
+      "rationale": "TaskFlow is software with no physical delivery. Tests whether a similarity floor suppresses weak matches."
+    },
+    {
+      "id": "H1",
+      "split": "holdout",
+      "category": "paraphrase",
+      "question": "Why are users unable to reach their workspace?",
+      "relevant_ids": ["VAL-013", "VAL-014", "VAL-015", "VAL-017", "VAL-018"],
+      "rationale": "Held-out paraphrase of the primary login-failure intent."
+    },
+    {
+      "id": "H2",
+      "split": "holdout",
+      "category": "paraphrase",
+      "question": "Are customers waiting too long for data to render?",
+      "relevant_ids": ["VAL-007", "VAL-010", "VAL-019"],
+      "rationale": "Held-out paraphrase of the performance intent."
+    },
+    {
+      "id": "H3",
+      "split": "holdout",
+      "category": "paraphrase",
+      "question": "Did anyone find the staff unresponsive?",
+      "relevant_ids": ["VAL-012", "VAL-020"],
+      "rationale": "Held-out paraphrase of the negative-support intent."
+    },
+    {
+      "id": "H4",
+      "split": "holdout",
+      "category": "vocabulary-overlap",
+      "question": "Is the product reasonably priced?",
+      "relevant_ids": ["VAL-006", "VAL-022"],
+      "rationale": "Control case. Query vocabulary overlaps the corpus, so lexical retrieval should also succeed. If semantic retrieval loses here it is trading recall for paraphrase handling."
+    },
+    {
+      "id": "H5",
+      "split": "holdout",
+      "category": "multi-theme",
+      "question": "Which reviews praise how the app looks and feels?",
+      "relevant_ids": ["VAL-003", "VAL-009", "VAL-016", "VAL-021"],
+      "rationale": "VAL-016 is included because it praises the interface while complaining about login. A retriever that treats a review as single-topic will miss it."
+    },
+    {
+      "id": "H6",
+      "split": "holdout",
+      "category": "absent-topic",
+      "question": "Do reviews discuss cryptocurrency or blockchain?",
+      "relevant_ids": [],
+      "rationale": "Held-out absent topic, unrelated to any corpus theme."
+    },
+    {
+      "id": "H7",
+      "split": "holdout",
+      "category": "absent-topic",
+      "question": "Is there feedback about noise or sound quality?",
+      "relevant_ids": [],
+      "rationale": "Held-out absent topic that exists in the shipped taxonomy ('sound') but not in this corpus. Tests whether taxonomy membership alone triggers a match."
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "demo": "npm run build && node scripts/local-demo.mjs",
@@ -14,7 +14,10 @@
     "test": "node scripts/test-reviewlens.mjs && npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern work",
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
-    "test:reviewlens": "node scripts/test-reviewlens.mjs"
+    "test:reviewlens": "node scripts/test-reviewlens.mjs",
+    "eval": "node scripts/eval.mjs",
+    "eval:holdout": "node scripts/eval.mjs --holdout --confirm",
+    "verify": "npx tsc --noEmit && npm run lint && npm test && npm run eval"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -63,5 +66,6 @@
     "vite": "8.0.13",
     "wrangler": "4.92.0"
   },
-  "type": "module"
+  "type": "module",
+  "license": "MIT"
 }

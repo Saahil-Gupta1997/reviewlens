@@ -13,7 +13,23 @@ export function database() {
 export function runtimeValue(key: string) {
   return (env as unknown as Record<string, string>)[key] || "";
 }
+/**
+ * Tenant isolation depends entirely on `oai-authenticated-user-id`, injected by a trusted
+ * identity gateway in front of this Worker. The header is unauthenticated at this layer: if
+ * the app is ever reachable without that gateway, anyone can set the header and read any
+ * tenant's datasets.
+ *
+ * Documenting that risk is not a control, so a deployment must assert the gateway exists by
+ * setting IDENTITY_GATEWAY. Without the assertion the API refuses to serve rather than
+ * silently trusting a client-supplied header. See docs/delivery/ai-risk-assessment.md
+ * (RISK-07) and docs/delivery/raid-log.md (ISS-01).
+ */
 export function ownerOf(request: Request) {
+  if (!runtimeValue("IDENTITY_GATEWAY"))
+    throw new ApiError(
+      "This deployment has not declared a trusted identity gateway, so requests cannot be attributed to an owner. Set IDENTITY_GATEWAY for a gateway-fronted deployment, or use the local single-user demo.",
+      503,
+    );
   const id = request.headers.get("oai-authenticated-user-id");
   if (!id)
     throw new ApiError("Sign in to access your private review workspace.", 401);

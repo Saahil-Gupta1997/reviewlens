@@ -42,3 +42,7 @@ next-env.d.ts
 /work/
 *.tsbuildinfo
 /.reviewlens-local/
+
+# Evaluation run artifacts. eval/reports/latest.md is committed on purpose so a reader
+# sees a real measured report without running anything; timestamped runs are not.
+/eval/reports/*.json

@@ -16,7 +16,7 @@ async function asset(request){
 }
 const mf=new Miniflare({modules:true,modulesRules:[{type:'ESModule',include:['**/*.js']}],scriptPath:'dist/server/index.js',
  compatibilityDate:'2026-05-01',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'reviewlens-local'},d1Persist:path.join(state,'d1'),
- bindings:{KEY_ENCRYPTION_SECRET:await readFile(secretPath,'utf8')},serviceBindings:{ASSETS:asset}});
+ bindings:{KEY_ENCRYPTION_SECRET:await readFile(secretPath,'utf8'),IDENTITY_GATEWAY:'local-loopback-single-user'},serviceBindings:{ASSETS:asset}});
 const db=await mf.getD1Database('DB');
 await db.prepare('CREATE TABLE IF NOT EXISTS local_migrations (name TEXT PRIMARY KEY)').run();
 const journal=JSON.parse(await readFile('drizzle/meta/_journal.json','utf8'));
