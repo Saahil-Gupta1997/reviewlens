@@ -1,4 +1,4 @@
-import { MODEL, REVISION, INDEX_VERSION, chunks, validVector, rank } from './semantic-core.js';
+import { MODEL, REVISION, INDEX_VERSION, chunks, validVector, rank, describeFailure } from './semantic-core.js';
 
 let extractor, databasePromise;
 function database() {
@@ -109,8 +109,11 @@ self.onmessage = async ({ data }) => {
     }
     throw Error('Unknown device operation.');
   } catch (error) {
-    self.postMessage({ id, error: 'On-device search could not finish. ' +
-      (/storage|index|embedding|Close other/.test(error.message || '') ? error.message :
-       'Check your connection and allow downloads from Hugging Face and jsDelivr. Your saved reviews are safe; Basic analysis remains available.') });
+    // Always log the real error. The previous handler discarded it in favour of a guessed
+    // cause, which is how a broken import was misdiagnosed as a network problem for weeks.
+    const raw = error?.message || String(error);
+    console.error('ReviewLens on-device failure:', raw, error);
+    const { cause, message, detail } = describeFailure(raw);
+    self.postMessage({ id, error: 'On-device search could not finish. ' + message, cause, detail });
   }
 };
