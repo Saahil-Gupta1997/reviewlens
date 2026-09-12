@@ -52,8 +52,15 @@ async function existing(dataset, reviews) {
 async function model(progress) {
   if (!extractor) {
     progress('Downloading the on-device model. First use needs an internet connection.');
-    // Pinned browser ESM build. No review or question is placed in an external URL.
-    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.web.js');
+    // Pinned, self-contained browser ESM bundle. No review or question is placed in an
+    // external URL.
+    //
+    // Must be dist/transformers.min.js, NOT dist/transformers.web.js. The package declares
+    // transformers.web.js as its default browser export, but that build ships unresolved
+    // bare specifiers ("onnxruntime-common") that a browser cannot resolve without an
+    // import map, so importing it throws before any model request is made.
+    // See docs/delivery/postmortem-device-model-load.md.
+    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js');
     env.allowLocalModels = false;
     env.backends.onnx.wasm.numThreads = 1; // Works without SharedArrayBuffer/cross-origin isolation.
     env.backends.onnx.wasm.proxy = false;

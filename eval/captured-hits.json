@@ -1,0 +1,9 @@
+{
+  "D1": [{"reviewId":"VAL-020","score":0.3369},{"reviewId":"VAL-004","score":0.3309},{"reviewId":"VAL-012","score":0.3165}],
+  "D2": [{"reviewId":"VAL-019","score":0.5737},{"reviewId":"VAL-007","score":0.4507},{"reviewId":"VAL-005","score":0.3549},{"reviewId":"VAL-011","score":0.3349},{"reviewId":"VAL-010","score":0.3011}],
+  "D3": [],
+  "D4": [{"reviewId":"VAL-024","score":0.3045}],
+  "D5": [],
+  "D6": [],
+  "D7": [{"reviewId":"VAL-022","score":0.304}]
+}

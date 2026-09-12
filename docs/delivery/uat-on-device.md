@@ -3,9 +3,14 @@
 The test plan for the feature that has not shipped. This is **ISS-03**, the P0 blocking a
 default-on decision on on-device semantic search.
 
-Everything below is **Not run**. The authoring environment could not download the model or
-runtime from Hugging Face and jsDelivr, so `Xenova/all-MiniLM-L6-v2` has never produced an
-embedding in this system.
+**Update 2026-09-12: Part 2 has been run.** The model executed on Chrome 152 / Windows 11 and
+the result is in [evaluation-semantic-result.md](evaluation-semantic-result.md) - it **missed
+the gate**. Reaching that point required fixing a defect that made the runtime unable to load
+at all ([postmortem](postmortem-device-model-load.md)).
+
+Part 1 (the functional checklist below) is still **largely not run**: steps 1, 2, 4 and 13 are
+covered by the harness, but the failure-mode steps - blocked CDN, cleared storage mid-index,
+pause/resume, long-review tails - remain untested.
 
 ## Why a checklist is not enough
 

@@ -14,11 +14,17 @@ figure, because none has been measured.
 | Metric                                    | Value      | Command            | Caveat                                             |
 | ----------------------------------------- | ---------- | ------------------ | -------------------------------------------------- |
 | Retrieval recall@5, lexical, dev split    | **0.200**  | `npm run eval`     | 24-review fixture, one annotator                   |
+| Retrieval recall@5, **on-device semantic** | **0.267** | `npm run eval -- --hits` | Chrome 152. Bar was 0.70 — **FAILED** |
+| Retrieval precision@5, on-device semantic | 0.320 | `npm run eval -- --hits` | Bar was 0.50 — **FAILED** |
+| Absent-topic FP rate, on-device semantic | **0.50** | `npm run eval -- --hits` | Bar was 0.25 — **FAILED**. Lexical scores 0.00 here |
+| Thresholds clearing the semantic gate | **0 of 66** | `node scripts/threshold-sweep.mjs` | No similarity floor separates signal from noise |
+| On-device index build, 24 reviews | **11,242 ms** | `scripts/device-harness/` | q8 WASM single-thread, first run incl. model download |
+| On-device query latency | **22–38 ms** | `scripts/device-harness/` | After the index is warm |
 | Retrieval precision@5, lexical, dev split | 0.180      | `npm run eval`     | as above                                           |
 | MRR, lexical, dev split                   | 0.400      | `npm run eval`     | as above                                           |
 | Absent-topic false-positive rate, lexical | 0.000      | `npm run eval`     | 2 dev cases only                                   |
 | p95 retrieval latency                     | ~13 ms     | `npm run eval`     | In-process, excludes network and model load        |
-| Automated test count                      | 36 passing | `npm test`         | Simulated provider; synthetic device vectors       |
+| Automated test count                      | 52 + smoke | `npm test`         | Simulated provider; synthetic device vectors       |
 | Acceptance cases in-app                   | 24         | Quality tab        | Synthetic; routing, calculations, scope, ingestion |
 | Type errors                               | 0          | `npx tsc --noEmit` |                                                    |
 

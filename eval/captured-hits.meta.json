@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-09-12T11:07:38.475Z",
+  "browser": "Chrome 152.0.7977.76 (Windows NT 10.0 Win64 x64)",
+  "model": "Xenova/all-MiniLM-L6-v2@751bff3",
+  "inference": "q8, WASM, single-threaded, mean pooling, normalized, 384 dimensions",
+  "runtime": "@huggingface/transformers@3.8.1 dist/transformers.min.js via jsDelivr",
+  "reviews_indexed": 24,
+  "index_ms": 11242,
+  "status_after_refresh": 24,
+  "persistence_verified": true,
+  "search_latency_ms": { "D1": 38, "D2": 31, "D3": 31, "D4": 22, "D5": 31, "D6": 24, "D7": 27 },
+  "threshold": 0.3,
+  "harness": "scripts/device-harness/ running the shipped public/semantic-worker.js unmodified",
+  "note": "First execution of the on-device model in a browser. Required fixing the runtime import in public/semantic-worker.js; see docs/delivery/postmortem-device-model-load.md."
+}
