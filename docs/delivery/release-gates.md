@@ -16,11 +16,12 @@ npm run verify
 | 2 | Lint | `npm run lint` | ESLint error |
 | 3 | Behaviour | `npm test` — automated tests + smoke | Any failure across engine, API, device-ranking and rendered-HTML suites |
 | 4 | Build | `npm run build` (inside `npm test`) | Production build or the rendered-HTML smoke test fails |
-| 5 | **Retrieval quality** | `npm run eval` | recall@5 < 0.19, precision@5 < 0.17, absent-topic FP > 0.30, or p95 > 250 ms |
+| 5 | **Retrieval regression** | `npm run eval` | recall@5 < 0.19, precision@5 < 0.17, absent-topic FP > 0.30, or p95 > 250 ms |
 
-Gate 5 is the one that makes this a release process rather than a test suite. It fails the
-build on a **quality regression**, not just a broken build — a change that keeps every test
-green while making retrieval worse still stops the pipeline.
+Gate 5 fails the build on a **retrieval regression**, not just a broken build — a change that
+keeps every test green while making lexical retrieval worse still stops the pipeline. Its
+limits are the fixture's: seven development questions, 24 fictional reviews, one annotator.
+It is a tripwire pinned at the measured baseline, not a quality certification.
 
 ## Conditional — enforced when the input exists
 

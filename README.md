@@ -5,6 +5,13 @@
 An AI/ML Technical Program Manager portfolio project by **Saahil Gupta**, built with Codex
 assistance ([who did what](docs/product-case-study.md#ownership)).
 
+**Provenance.** ReviewLens was built between early August and September 2026 in a hosted
+Codex sandbox with no version control, starting from an earlier prototype and a Vinext
+starter, and the working tree was exported to GitHub on 2026-09-11 as a single commit — which
+is why the history opens with 25,000 lines and why entries in the
+[decision log](docs/delivery/decision-log.md) are dated before the repository existed.
+Everything since that commit has landed through branches and pull requests here.
+
 ReviewLens answers questions about product reviews with verifiable statistics, traceable
 source evidence, and an experimental retrieval path. The delivery problem it exists to
 demonstrate is the one every AI feature has: **the demo works, and that tells you nothing
@@ -18,7 +25,7 @@ about whether the feature works.**
 
 [MP4 download](docs/demo/reviewlens-api-walkthrough.mp4) · [Captured requests and responses](docs/demo/captured-workflow.json)
 
-This is a captioned replay of real HTTP requests to the production build, **not a browser screen recording**. It shows 20 fictional reviews, 4/20 two-star reviews, complaint ranking, exact source checks, EU scope and saved history. No API key or model inference was used. The cloud browser could not capture the local app in this session.
+This is a captioned replay of real HTTP requests to the production build, **not a browser screen recording**. It shows 20 fictional reviews, 4/20 two-star reviews, complaint ranking, exact source checks, EU scope and saved history. No API key or model inference was used. A browser screen recording is still open as [#10](https://github.com/Saahil-Gupta1997/reviewlens/issues/10).
 
 ## Start here
 
@@ -32,7 +39,7 @@ This is a captioned replay of real HTTP requests to the production build, **not 
 
 **1. A measured baseline instead of an assumption.** The hypothesis was that keyword search
 misses paraphrased questions. That was a belief until it was measured. It is now a number: on
-a human-labelled golden set, lexical retrieval scores **recall@5 = 0.20**. This is mean recall across five relevant-topic development questions. On _"Which customers are locked out of their accounts?"_ it
+a 24-review fixture labelled by one annotator (me), lexical retrieval scores **recall@5 = 0.20**. This is mean recall across five relevant-topic development questions — a diagnostic, not a benchmark. On _"Which customers are locked out of their accounts?"_ it
 returns nothing at all. That number justifies the semantic feature and sets the bar it has to
 clear.
 
@@ -40,13 +47,15 @@ clear.
 npm run eval
 ```
 
-**2. A quality gate that can fail the build.** `npm run eval` scores retrieval against the
-golden set and exits non-zero below threshold. It runs in CI on every push. Two threshold
-sets: a regression gate pinned at the measured baseline, and a release gate — agreed _before_
-the feature was measured — that semantic retrieval must clear before shipping default-on. The
-holdout split refuses to run without an explicit confirmation flag, and every holdout run is
-appended to an audit log, so _"we did not tune on the evaluation set"_ is checkable rather
-than promised.
+**2. A regression check that can fail the build — on a seven-question fixture.** `npm run eval`
+scores lexical retrieval against the fixture and exits non-zero if it drops below the measured
+baseline. It runs in CI on every push. With seven development questions (five with relevant
+reviews, two without) and one annotator, it catches a regression; it does not certify quality,
+and a single hit moves the headline number. Two threshold sets: a regression gate pinned at
+the measured baseline, and a release gate — agreed _before_ the feature was measured — that
+semantic retrieval must clear before shipping default-on. The holdout split refuses to run
+without an explicit confirmation flag, and every holdout run is appended to an audit log, so
+_"we did not tune on the evaluation set"_ is checkable rather than promised.
 
 **3. A no-go, now backed by measurement rather than caution.** On-device semantic search was
 held back because it was unverified. It has since been run and scored: it **missed its gate on
@@ -61,7 +70,8 @@ Stated before the feature list, deliberately.
 - **Semantic retrieval quality is now measured, and it FAILED its release gate.** The model
   ran in a real browser on 2026-09-12 and scored recall@5 = 0.267 against a bar of 0.70, with a
   one false positive across two absent-topic questions. None of the 66 tested floors cleared the quality bounds on this development set.
-  See [the result](docs/delivery/evaluation-semantic-result.md).
+  The sample is small enough that the exact numbers are not the point; the no-go rests on
+  missing all three quality bounds at once. See [the result](docs/delivery/evaluation-semantic-result.md).
 - **Generated-answer faithfulness.** Quote _existence_ is verified in code. Claim _support_ is
   unmeasured.
 - **Cross-browser IndexedDB lifecycle**, held-out retrieval accuracy, and live paid-provider
@@ -120,7 +130,7 @@ npm run verify
 ```
 
 Runs the typecheck, lint, automated tests, the production build, and the retrieval
-quality gate. Every gate is listed in [release gates](docs/delivery/release-gates.md).
+regression check. Every gate is listed in [release gates](docs/delivery/release-gates.md).
 
 ## Architecture
 

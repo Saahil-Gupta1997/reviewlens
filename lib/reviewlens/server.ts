@@ -122,8 +122,14 @@ export async function providerSettings(owner: string) {
       model: string;
       embedding_model: string;
     }>();
-  let key = "", keyInvalid = false;
-  if (s?.encrypted_key) try { key = await unseal(s.encrypted_key); } catch { keyInvalid = true; }
+  let key = "",
+    keyInvalid = false;
+  if (s?.encrypted_key)
+    try {
+      key = await unseal(s.encrypted_key);
+    } catch {
+      keyInvalid = true;
+    }
   return {
     key,
     configured: !!s?.encrypted_key,

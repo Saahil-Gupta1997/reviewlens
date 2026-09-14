@@ -1,8 +1,8 @@
 name: Verify ReviewLens
 
-# Every automatable gate in docs/delivery/release-gates.md runs here. The retrieval
-# quality gate is the one that makes this a release process rather than a test suite:
-# it fails the build on a quality regression, not only on broken code.
+# Every automatable gate in docs/delivery/release-gates.md runs here. Gate 5 is a
+# regression check on a seven-question labelled fixture: it fails the build if lexical
+# retrieval drops below the measured baseline. It does not certify retrieval quality.
 
 on: [push, pull_request]
 permissions:
@@ -29,7 +29,7 @@ jobs:
       - name: Gates 3 and 4 - behaviour and build
         run: npm test
 
-      - name: Gate 5 - retrieval quality regression
+      - name: Gate 5 - retrieval regression (7-question fixture)
         run: npm run eval
 
       - name: Publish evaluation report

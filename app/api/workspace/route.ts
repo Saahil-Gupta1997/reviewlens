@@ -67,7 +67,10 @@ function validDate(value: string) {
   );
 }
 function safeFilters(value: unknown): Filters {
-  if (value !== undefined && (value === null || typeof value !== "object" || Array.isArray(value)))
+  if (
+    value !== undefined &&
+    (value === null || typeof value !== "object" || Array.isArray(value))
+  )
     throw new ApiError("Filters must be an object.");
   const f = (value || {}) as Record<string, unknown>;
   const result: Record<string, string> = {};
@@ -85,10 +88,17 @@ function safeFilters(value: unknown): Filters {
       if (f[k].length > 200) throw new ApiError("Filter is too long.");
       result[k] = f[k];
     }
-  if (result.rating && !/^(?:[1-5]|negative|positive|unrated)$/.test(result.rating))
-    throw new ApiError("Rating filter must be 1–5, negative, positive, or unrated.");
-  if (result.from && !validDate(result.from)) throw new ApiError("Start date must use a valid YYYY-MM-DD date.");
-  if (result.to && !validDate(result.to)) throw new ApiError("End date must use a valid YYYY-MM-DD date.");
+  if (
+    result.rating &&
+    !/^(?:[1-5]|negative|positive|unrated)$/.test(result.rating)
+  )
+    throw new ApiError(
+      "Rating filter must be 1–5, negative, positive, or unrated.",
+    );
+  if (result.from && !validDate(result.from))
+    throw new ApiError("Start date must use a valid YYYY-MM-DD date.");
+  if (result.to && !validDate(result.to))
+    throw new ApiError("End date must use a valid YYYY-MM-DD date.");
   if (result.from && result.to && result.from > result.to)
     throw new ApiError("The start date must be before the end date.");
   return result;
@@ -170,8 +180,14 @@ export async function POST(request: Request) {
     if (origin && origin !== new URL(request.url).origin)
       throw new ApiError("Request origin is not allowed.", 403);
     const parsedBody = await readBody(request);
-    if (!parsedBody || typeof parsedBody !== "object" || Array.isArray(parsedBody)) throw new ApiError("Request body must be a JSON object.");
-    const body = parsedBody as Record<string, any>, db = database();
+    if (
+      !parsedBody ||
+      typeof parsedBody !== "object" ||
+      Array.isArray(parsedBody)
+    )
+      throw new ApiError("Request body must be a JSON object.");
+    const body = parsedBody as Record<string, any>,
+      db = database();
     if (body.action === "settings") {
       const key = typeof body.key === "string" ? body.key.trim() : "";
       if (
@@ -204,7 +220,8 @@ export async function POST(request: Request) {
       return json({ saved: true });
     }
     if (body.action === "import" || body.action === "demo") {
-      if (body.name !== undefined && typeof body.name !== "string") throw new ApiError("Give this dataset a valid name.");
+      if (body.name !== undefined && typeof body.name !== "string")
+        throw new ApiError("Give this dataset a valid name.");
       const name = String(
         body.name ||
           (body.action === "demo"
@@ -223,10 +240,29 @@ export async function POST(request: Request) {
         )
         .bind(uploadId, owner)
         .first();
-      if (existing) return json({ id: uploadId, issues: [], accepted: existing.count, rejected: existing.rejected, duplicates: existing.duplicates });
-      const collision = await db.prepare("SELECT owner FROM datasets WHERE id=?").bind(uploadId).first<{owner:string}>();
-      if (collision) throw new ApiError("Upload identifier is unavailable. Retry the import.",409);
-      await db.prepare("DELETE FROM datasets WHERE owner=? AND status='processing' AND created_at<?").bind(owner,new Date(Date.now()-60*60*1000).toISOString()).run();
+      if (existing)
+        return json({
+          id: uploadId,
+          issues: [],
+          accepted: existing.count,
+          rejected: existing.rejected,
+          duplicates: existing.duplicates,
+        });
+      const collision = await db
+        .prepare("SELECT owner FROM datasets WHERE id=?")
+        .bind(uploadId)
+        .first<{ owner: string }>();
+      if (collision)
+        throw new ApiError(
+          "Upload identifier is unavailable. Retry the import.",
+          409,
+        );
+      await db
+        .prepare(
+          "DELETE FROM datasets WHERE owner=? AND status='processing' AND created_at<?",
+        )
+        .bind(owner, new Date(Date.now() - 60 * 60 * 1000).toISOString())
+        .run();
       const count = await db
         .prepare("SELECT COUNT(*) AS n FROM datasets WHERE owner=?")
         .bind(owner)
@@ -338,13 +374,22 @@ export async function POST(request: Request) {
           JSON.stringify(evaluation),
         )
         .run();
-      await db.prepare("DELETE FROM evaluations WHERE owner=? AND id NOT IN (SELECT id FROM evaluations WHERE owner=? ORDER BY created_at DESC LIMIT 10)").bind(owner,owner).run();
+      await db
+        .prepare(
+          "DELETE FROM evaluations WHERE owner=? AND id NOT IN (SELECT id FROM evaluations WHERE owner=? ORDER BY created_at DESC LIMIT 10)",
+        )
+        .bind(owner, owner)
+        .run();
       return json(evaluation);
     }
-    if (typeof body.datasetId !== "string") throw new ApiError("Choose a dataset.");
+    if (typeof body.datasetId !== "string")
+      throw new ApiError("Choose a dataset.");
     if (body.action === "delete") {
-      const removed = await db.prepare("DELETE FROM datasets WHERE id=? AND owner=? RETURNING id").bind(body.datasetId,owner).first();
-      if (!removed) throw new ApiError("Dataset not found.",404);
+      const removed = await db
+        .prepare("DELETE FROM datasets WHERE id=? AND owner=? RETURNING id")
+        .bind(body.datasetId, owner)
+        .first();
+      if (!removed) throw new ApiError("Dataset not found.", 404);
       return json({ deleted: true });
     }
     await owned(body.datasetId, owner);
@@ -352,7 +397,8 @@ export async function POST(request: Request) {
     if (body.action === "feedback") {
       if (!["useful", "incorrect", "unsupported"].includes(body.feedback))
         throw new ApiError("Choose a valid feedback type.");
-      if (typeof body.answerId !== "string") throw new ApiError("Answer identifier is invalid.");
+      if (typeof body.answerId !== "string")
+        throw new ApiError("Answer identifier is invalid.");
       const r = await db
         .prepare(
           "UPDATE answers SET feedback=? WHERE id=? AND dataset_id=? AND owner=? RETURNING id",
@@ -364,7 +410,10 @@ export async function POST(request: Request) {
     }
     if (body.action === "index") {
       const cfg = await providerSettings(owner);
-      if (cfg.keyInvalid) throw new ApiError("Your saved API key can no longer be decrypted. Re-enter it in Settings.");
+      if (cfg.keyInvalid)
+        throw new ApiError(
+          "Your saved API key can no longer be decrypted. Re-enter it in Settings.",
+        );
       if (!cfg.key)
         throw new ApiError(
           "Add an API key in Settings to enable semantic indexing.",
@@ -442,7 +491,10 @@ export async function POST(request: Request) {
         a.status !== "unsupported"
       ) {
         const cfg = await providerSettings(owner);
-        if (cfg.keyInvalid) throw new ApiError("Your saved API key can no longer be decrypted. Re-enter it in Settings.");
+        if (cfg.keyInvalid)
+          throw new ApiError(
+            "Your saved API key can no longer be decrypted. Re-enter it in Settings.",
+          );
         if (!cfg.key)
           throw new ApiError(
             "Add an API key in Settings or turn off AI synthesis.",

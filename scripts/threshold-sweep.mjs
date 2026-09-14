@@ -10,16 +10,17 @@
  *
  *   node scripts/threshold-sweep.mjs
  */
-import { readFile } from 'node:fs/promises';
+import { readFile } from "node:fs/promises";
 
 const K = 5;
-const golden = JSON.parse(await readFile('eval/golden-set.json', 'utf8'));
-const raw = JSON.parse(await readFile('eval/captured-raw-scores.json', 'utf8'));
-const thresholds = JSON.parse(await readFile('eval/thresholds.json', 'utf8'));
+const golden = JSON.parse(await readFile("eval/golden-set.json", "utf8"));
+const raw = JSON.parse(await readFile("eval/captured-raw-scores.json", "utf8"));
+const thresholds = JSON.parse(await readFile("eval/thresholds.json", "utf8"));
 const bar = thresholds.gates.semantic_release;
 
-const cases = golden.cases.filter((c) => c.split === 'dev' && raw.scores[c.id]);
-const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+const cases = golden.cases.filter((c) => c.split === "dev" && raw.scores[c.id]);
+const mean = (xs) =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
 
 function evaluate(t) {
   const scored = [];
@@ -45,7 +46,8 @@ function evaluate(t) {
 }
 
 const rows = [];
-for (let t = -0.05; t <= 0.6001; t += 0.01) rows.push(evaluate(Number(t.toFixed(2))));
+for (let t = -0.05; t <= 0.6001; t += 0.01)
+  rows.push(evaluate(Number(t.toFixed(2))));
 
 const passing = rows.filter(
   (r) =>
@@ -54,13 +56,15 @@ const passing = rows.filter(
     r.fp <= bar.absent_topic_false_positive_rate.max,
 );
 
-const n = (x, d = 3) => (x === null ? 'n/a' : x.toFixed(d));
-console.log('# Threshold sweep - on-device semantic, dev split\n');
+const n = (x, d = 3) => (x === null ? "n/a" : x.toFixed(d));
+console.log("# Threshold sweep - on-device semantic, dev split\n");
 console.log(
   `Gate: recall@5 >= ${bar.recall_at_5.min}, precision@5 >= ${bar.precision_at_5.min}, absent-topic FP <= ${bar.absent_topic_false_positive_rate.max}\n`,
 );
-console.log('| threshold | recall@5 | precision@5 | absent-topic FP | clears gate |');
-console.log('| --- | --- | --- | --- | --- |');
+console.log(
+  "| threshold | recall@5 | precision@5 | absent-topic FP | clears gate |",
+);
+console.log("| --- | --- | --- | --- | --- |");
 for (const r of rows) {
   if (Math.abs(r.t * 100) % 5 > 0.001) continue; // print every 0.05
   const ok =
@@ -68,7 +72,7 @@ for (const r of rows) {
     r.precision >= bar.precision_at_5.min &&
     r.fp <= bar.absent_topic_false_positive_rate.max;
   console.log(
-    `| ${r.t.toFixed(2)}${r.t === 0.3 ? ' (shipped)' : ''} | ${n(r.recall)} | ${n(r.precision)} | ${n(r.fp, 2)} | ${ok ? 'YES' : 'no'} |`,
+    `| ${r.t.toFixed(2)}${r.t === 0.3 ? " (shipped)" : ""} | ${n(r.recall)} | ${n(r.precision)} | ${n(r.fp, 2)} | ${ok ? "YES" : "no"} |`,
   );
 }
 
@@ -82,26 +86,32 @@ console.log(
 
 // The decisive comparison: does any correct answer outrank the best noise on an
 // absent-topic question? If not, no floor can separate them.
-console.log('\n## Signal vs noise overlap\n');
-console.log('| Case | Type | Top score | What it is |');
-console.log('| --- | --- | --- | --- |');
+console.log("\n## Signal vs noise overlap\n");
+console.log("| Case | Type | Top score | What it is |");
+console.log("| --- | --- | --- | --- |");
 for (const c of cases) {
   const top = raw.scores[c.id][0];
   const isAbsent = c.relevant_ids.length === 0;
-  const topRelevant = raw.scores[c.id].find((h) => c.relevant_ids.includes(h.reviewId));
+  const topRelevant = raw.scores[c.id].find((h) =>
+    c.relevant_ids.includes(h.reviewId),
+  );
   console.log(
-    `| ${c.id} | ${isAbsent ? 'absent-topic (noise)' : 'has relevant'} | ${top.score.toFixed(4)} | ${isAbsent ? 'highest false positive' : 'top overall = ' + top.reviewId + (topRelevant ? `; best relevant ${topRelevant.reviewId} @ ${topRelevant.score.toFixed(4)}` : '')} |`,
+    `| ${c.id} | ${isAbsent ? "absent-topic (noise)" : "has relevant"} | ${top.score.toFixed(4)} | ${isAbsent ? "highest false positive" : "top overall = " + top.reviewId + (topRelevant ? `; best relevant ${topRelevant.reviewId} @ ${topRelevant.score.toFixed(4)}` : "")} |`,
   );
 }
 
 const worstNoise = Math.max(
-  ...cases.filter((c) => !c.relevant_ids.length).map((c) => raw.scores[c.id][0].score),
+  ...cases
+    .filter((c) => !c.relevant_ids.length)
+    .map((c) => raw.scores[c.id][0].score),
 );
 const weakestSignal = Math.min(
   ...cases
     .filter((c) => c.relevant_ids.length)
     .map((c) => {
-      const best = raw.scores[c.id].find((h) => c.relevant_ids.includes(h.reviewId));
+      const best = raw.scores[c.id].find((h) =>
+        c.relevant_ids.includes(h.reviewId),
+      );
       return best ? best.score : -1;
     }),
 );
@@ -110,6 +120,6 @@ console.log(
 );
 console.log(
   weakestSignal > worstNoise
-    ? '\nSignal sits above noise: a threshold between them is worth calibrating.'
-    : '\n**Signal and noise overlap.** No similarity floor can admit the weakest correct answer while rejecting the strongest false positive. Calibration cannot fix this; the approach has to change or the feature has to be cut.',
+    ? "\nSignal sits above noise: a threshold between them is worth calibrating."
+    : "\n**Signal and noise overlap.** No similarity floor can admit the weakest correct answer while rejecting the strongest false positive. Calibration cannot fix this; the approach has to change or the feature has to be cut.",
 );

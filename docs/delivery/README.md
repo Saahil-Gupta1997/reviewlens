@@ -34,21 +34,24 @@ Three things in this repository are there to address that.
 
 **A measured baseline instead of an assumption.** The product hypothesis was that keyword
 search misses paraphrased questions. That was a belief until it was measured. It is now a
-number: on a human-labelled golden set, lexical retrieval scores **recall@5 = 0.20**. Four in
-five relevant reviews are missed. That number justifies the semantic feature, and it is the
-bar the feature has to beat.
+number: on a 24-review fixture labelled by one annotator, lexical retrieval scores
+**recall@5 = 0.20** across five relevant-topic questions. That number justifies the semantic
+feature, and it is the bar the feature has to beat.
 
-**A gate that can fail.** `npm run eval` scores retrieval against the golden set and exits
-non-zero below threshold. It runs in CI on every push. There are two threshold sets: a
-regression gate pinned at the measured baseline, and a release gate — agreed _before_ the
-feature was measured — that on-device semantic retrieval must clear before it can ship as a
-default mode. The holdout split refuses to run without an explicit confirmation flag, and
-every holdout run is appended to an audit log.
+**A regression check that can fail.** `npm run eval` scores lexical retrieval against the
+fixture and exits non-zero if it drops below the measured baseline. It runs in CI on every
+push. Seven development questions and one annotator make it a tripwire, not a quality
+certification. There are two threshold sets: a regression gate pinned at the measured
+baseline, and a release gate — agreed _before_ the feature was measured — that on-device
+semantic retrieval must clear before it can ship as a default mode. The holdout split refuses
+to run without an explicit confirmation flag, and every holdout run is appended to an audit
+log.
 
-**A no-go that stuck.** On-device semantic search is built, typed, tested against synthetic
-vectors, and **not shipped as a default mode**, because the model has never actually run in a
-browser. The evaluation harness for it is finished and waiting for input; the feature is
-behind an explicit "limited evidence" label. That call is recorded in the
+**A no-go that stuck.** On-device semantic search was run in a real browser on 2026-09-12,
+after a [load defect](postmortem-device-model-load.md) was fixed, and
+[missed its release gate](evaluation-semantic-result.md) on three of four bounds. The
+thresholds were not moved; the feature is closed as a supported capability and kept as a
+measured negative result. That call is recorded in the
 [launch readiness review](launch-readiness-review.md) with the evidence for it.
 
 ## What this repository is not
